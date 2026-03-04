@@ -1,0 +1,1981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>TERMINAL VELOCITY</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&family=Oswald:wght@300;400;700&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#000; overflow:hidden; font-family:'Oswald',sans-serif; user-select:none; -webkit-user-select:none; }
+  canvas { display:block; }
+
+  #ui {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    pointer-events:none; z-index:10;
+  }
+
+  /* HUD */
+  #hud {
+    position:absolute; top:16px; left:16px; right:16px;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    opacity:0; transition:opacity 0.6s;
+  }
+  #hud.show { opacity:1; }
+  .hud-box {
+    background:rgba(0,0,0,0.45); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border:1px solid rgba(255,255,255,0.07); border-radius:6px;
+    padding:8px 16px; min-width:100px;
+  }
+  .hud-label {
+    font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:3px;
+    text-transform:uppercase; color:rgba(255,255,255,0.35); margin-bottom:1px;
+  }
+  .hud-val {
+    font-family:'Bebas Neue',sans-serif; font-size:28px; color:#fff;
+    letter-spacing:2px; line-height:1;
+  }
+  .hud-val small { font-size:12px; opacity:0.35; }
+
+  /* Altitude bar */
+  #alt-track {
+    position:absolute; right:16px; top:70px; bottom:70px; width:5px;
+    background:rgba(255,255,255,0.06); border-radius:3px;
+    opacity:0; transition:opacity 0.6s;
+  }
+  #alt-track.show { opacity:1; }
+  #alt-fill {
+    position:absolute; bottom:0; width:100%; border-radius:3px;
+    background:linear-gradient(to top,#00ff88,#00bbff,#ff4466);
+    transition:height 0.15s linear;
+  }
+  #deploy-marker {
+    position:absolute; bottom:4%; left:-8px; width:22px; height:2px;
+    background:#00ff88; border-radius:1px; opacity:0.5;
+  }
+  #deploy-label {
+    position:absolute; bottom:calc(4% - 6px); left:-52px;
+    font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:1px;
+    color:rgba(0,255,136,0.45);
+  }
+
+  /* Combo */
+  #combo {
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    font-family:'Bebas Neue',sans-serif; font-size:48px; color:#ffcc00;
+    text-shadow:0 0 20px rgba(255,204,0,0.5); opacity:0;
+    transition:opacity 0.2s; pointer-events:none;
+  }
+
+  /* Near miss */
+  #nearmiss {
+    position:absolute; top:38%; left:50%; transform:translate(-50%,-50%);
+    font-family:'JetBrains Mono',monospace; font-size:13px; letter-spacing:4px;
+    color:#00ffcc; text-shadow:0 0 12px rgba(0,255,200,0.6); opacity:0;
+    transition:opacity 0.15s; text-transform:uppercase;
+  }
+
+  /* Speed brake */
+  #speedbrake {
+    position:absolute; top:60%; left:50%; transform:translate(-50%,-50%);
+    font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:6px;
+    color:#00ff88; text-shadow:0 0 20px rgba(0,255,136,0.6); opacity:0;
+    transition:opacity 0.2s; text-transform:uppercase; pointer-events:none;
+  }
+
+  /* Zone banner */
+  #zone-banner {
+    position:absolute; top:45%; left:50%; transform:translate(-50%,-50%);
+    font-family:'Bebas Neue',sans-serif; font-size:clamp(28px,5vw,56px);
+    letter-spacing:10px; color:rgba(255,255,255,0.8);
+    text-shadow:0 0 40px rgba(100,200,255,0.4);
+    opacity:0; transition:opacity 0.8s; pointer-events:none;
+  }
+
+  /* Warning pulse */
+  #warn {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    border:3px solid transparent; pointer-events:none;
+    transition:border-color 0.2s;
+  }
+  #warn.danger { border-color:rgba(255,50,50,0.3); animation:warnPulse 0.8s ease-in-out infinite; }
+  @keyframes warnPulse {
+    0%,100% { border-color:rgba(255,50,50,0.15); }
+    50% { border-color:rgba(255,50,50,0.4); }
+  }
+
+  /* Vignette */
+  #vignette {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%);
+    pointer-events:none;
+  }
+
+  /* ---- SCREENS ---- */
+  .screen {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    z-index:50; transition:opacity 1s ease; pointer-events:none; opacity:0;
+  }
+  .screen.show { opacity:1; pointer-events:all; }
+
+  #start-screen { background:transparent; }
+
+  .title {
+    font-family:'Bebas Neue',sans-serif; font-size:clamp(50px,12vw,130px);
+    color:#fff; letter-spacing:12px; line-height:0.88; text-align:center;
+    text-shadow:0 0 80px rgba(0,150,255,0.3);
+    animation:titleGlow 3s ease-in-out infinite;
+  }
+  @keyframes titleGlow {
+    0%,100% { text-shadow:0 0 60px rgba(0,150,255,0.25); }
+    50% { text-shadow:0 0 100px rgba(0,150,255,0.5), 0 4px 60px rgba(0,100,255,0.2); }
+  }
+  .subtitle {
+    font-family:'JetBrains Mono',monospace; font-size:clamp(9px,1.3vw,13px);
+    letter-spacing:8px; color:rgba(255,255,255,0.25); margin-top:10px;
+    text-transform:uppercase;
+  }
+  .play-btn {
+    margin-top:50px; font-family:'Oswald',sans-serif; font-weight:300;
+    font-size:clamp(13px,1.8vw,18px); letter-spacing:6px; text-transform:uppercase;
+    color:rgba(255,255,255,0.5); padding:14px 32px;
+    border:1px solid rgba(255,255,255,0.1); border-radius:4px;
+    cursor:pointer; transition:all 0.3s; background:none;
+    pointer-events:all;
+  }
+  .play-btn:hover { background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.25); color:#fff; }
+  .controls-info {
+    margin-top:24px; font-family:'JetBrains Mono',monospace; font-size:10px;
+    color:rgba(255,255,255,0.15); letter-spacing:2px; text-align:center; line-height:2.2;
+  }
+
+  /* End screens */
+  #win-screen { background:radial-gradient(ellipse at center, rgba(0,50,30,0.92) 0%, rgba(0,0,0,0.97) 100%); }
+  #death-screen { background:radial-gradient(ellipse at center, rgba(70,0,0,0.92) 0%, rgba(0,0,0,0.97) 100%); }
+  .end-title {
+    font-family:'Bebas Neue',sans-serif; font-size:clamp(42px,9vw,100px);
+    letter-spacing:8px; color:#fff;
+  }
+  .end-stats {
+    margin-top:18px; font-family:'JetBrains Mono',monospace; font-size:12px;
+    color:rgba(255,255,255,0.35); letter-spacing:2px; text-align:center; line-height:2.4;
+  }
+  .end-stats span { color:rgba(255,255,255,0.85); font-weight:700; }
+  .retry-btn {
+    margin-top:36px; font-family:'Oswald',sans-serif; font-weight:300;
+    font-size:15px; letter-spacing:5px; text-transform:uppercase;
+    color:rgba(255,255,255,0.5); padding:12px 28px;
+    border:1px solid rgba(255,255,255,0.12); border-radius:4px;
+    cursor:pointer; background:none; transition:all 0.3s;
+  }
+  .retry-btn:hover { background:rgba(255,255,255,0.07); border-color:rgba(255,255,255,0.3); color:#fff; }
+
+  /* Mobile D-Pad */
+  #mobile-dpad {
+    display:none; /* shown via JS on mobile */
+    position:absolute;
+    bottom:24px; left:50%; transform:translateX(-50%);
+    z-index:45; pointer-events:all;
+    width:160px; height:160px;
+  }
+  .dpad-btn {
+    position:absolute;
+    width:52px; height:52px;
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.15);
+    border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    color:rgba(255,255,255,0.45);
+    font-size:22px;
+    touch-action:none;
+    user-select:none;
+    -webkit-user-select:none;
+    transition:background 0.1s, border-color 0.1s;
+  }
+  .dpad-btn.active {
+    background:rgba(255,255,255,0.18);
+    border-color:rgba(255,255,255,0.35);
+    color:rgba(255,255,255,0.8);
+  }
+  .dpad-btn svg { width:22px; height:22px; fill:currentColor; }
+  #dpad-up    { top:0;   left:50%;  transform:translateX(-50%); }
+  #dpad-down  { bottom:0; left:50%; transform:translateX(-50%); }
+  #dpad-left  { left:0;  top:50%;   transform:translateY(-50%); }
+  #dpad-right { right:0; top:50%;   transform:translateY(-50%); }
+
+  /* Cinematic parachute overlay */
+  #chute-cinema {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    z-index:60; pointer-events:none; opacity:0;
+    transition:opacity 0.6s ease;
+  }
+  #chute-cinema.show { opacity:1; }
+  #chute-canvas { width:100%; height:100%; }
+</style>
+</head>
+<body>
+
+<div id="ui">
+  <div id="vignette"></div>
+  <div id="warn"></div>
+
+  <div id="hud">
+    <div class="hud-box">
+      <div class="hud-label">Altitude</div>
+      <div class="hud-val" id="h-alt">7,500</div>
+    </div>
+    <div class="hud-box" style="text-align:center">
+      <div class="hud-label">Speed</div>
+      <div class="hud-val" id="h-spd">0 <small>MPH</small></div>
+    </div>
+    <div class="hud-box" style="text-align:right">
+      <div class="hud-label">Zone</div>
+      <div class="hud-val" id="h-zone">—</div>
+    </div>
+  </div>
+
+  <div id="alt-track">
+    <div id="alt-fill" style="height:100%"></div>
+    <div id="deploy-marker"></div>
+    <div id="deploy-label">DEPLOY</div>
+  </div>
+
+  <div id="combo"></div>
+  <div id="nearmiss"></div>
+  <div id="speedbrake"></div>
+  <div id="zone-banner"></div>
+
+  <!-- Screens -->
+  <div id="start-screen" class="screen show">
+    <div class="title">TERMINAL<br>VELOCITY</div>
+    <div class="subtitle">A Descent Into Chaos</div>
+    <button class="play-btn" id="btn-start">PRESS TO JUMP</button>
+    <div class="controls-info" id="controls-info">
+      ← → ↑ ↓ ARROW KEYS / WASD TO STEER<br>
+      DODGE EVERYTHING — SURVIVE THE FALL
+    </div>
+  </div>
+
+  <div id="win-screen" class="screen">
+    <div class="end-title" style="color:#00ff88">SAFE LANDING</div>
+    <div class="end-stats" id="win-stats"></div>
+    <button class="retry-btn" id="btn-win">JUMP AGAIN</button>
+  </div>
+
+  <div id="death-screen" class="screen">
+    <div class="end-title" style="color:#ff4444">WIPEOUT</div>
+    <div class="end-stats" id="death-stats"></div>
+    <button class="retry-btn" id="btn-death">TRY AGAIN</button>
+  </div>
+</div>
+
+<!-- Mobile D-Pad -->
+<div id="mobile-dpad">
+  <div class="dpad-btn" id="dpad-up" data-dir="up">
+    <svg viewBox="0 0 24 24"><path d="M12 4l-8 8h16z"/></svg>
+  </div>
+  <div class="dpad-btn" id="dpad-down" data-dir="down">
+    <svg viewBox="0 0 24 24"><path d="M12 20l8-8H4z"/></svg>
+  </div>
+  <div class="dpad-btn" id="dpad-left" data-dir="left">
+    <svg viewBox="0 0 24 24"><path d="M4 12l8-8v16z"/></svg>
+  </div>
+  <div class="dpad-btn" id="dpad-right" data-dir="right">
+    <svg viewBox="0 0 24 24"><path d="M20 12l-8 8V4z"/></svg>
+  </div>
+</div>
+
+<!-- Cinematic parachute overlay -->
+<div id="chute-cinema">
+  <canvas id="chute-canvas"></canvas>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════
+// TERMINAL VELOCITY — Full 3D Skydiving Game (Three.js)
+// ═══════════════════════════════════════════════════════
+
+// ---- Constants ----
+const START_ALT   = 7500;
+const DEPLOY_ALT  = 300;
+const CORRIDOR_R  = 28;   // cylinder radius of play area
+const CORRIDOR_W  = CORRIDOR_R; // alias for obstacle gen compatibility
+const CORRIDOR_D  = CORRIDOR_R;
+const OBS_SPACING = 60;   // vertical gap between obstacle rows
+const PLAYER_HITBOX = 1.4;
+const TERMINAL_VEL = 65;  // mph cap
+const TERMINAL_SPD = TERMINAL_VEL / 30; // internal speed units (HUD shows speed*30 as mph)
+
+// ---- State ----
+const S = { MENU:0, PLAY:1, DYING:2, CHUTE:3, WIN:4 };
+let state = S.MENU;
+let altitude, speed, maxSpd, playerVX, playerVZ, tiltX, tiltZ;
+let gameTime, obsPassed, nearMisses, combo, maxCombo, comboTime;
+let ringsHit = 0;
+let dieTimer, chuteTimer, fallDist;
+let invulnFrames = 0;
+let lastZoneName = '';
+let shakeAmt = 0;
+
+// ---- Three.js Setup ----
+const scene    = new THREE.Scene();
+const camera   = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.5, 800);
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = false;
+document.body.prepend(renderer.domElement);
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ---- Fog & Lighting ----
+scene.fog = new THREE.FogExp2(0x0a0a1a, 0.004);
+
+const ambLight = new THREE.AmbientLight(0x334466, 0.6);
+scene.add(ambLight);
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+dirLight.position.set(20, 50, 10);
+scene.add(dirLight);
+const rimLight = new THREE.DirectionalLight(0x4488ff, 0.3);
+rimLight.position.set(-15, -30, -10);
+scene.add(rimLight);
+
+// ---- Player ----
+const playerGroup = new THREE.Group();
+scene.add(playerGroup);
+
+// Inner group that holds the actual model — rotated so player faces DOWN
+const playerModel = new THREE.Group();
+playerModel.rotation.x = Math.PI; // flip 180° so head points down
+playerGroup.add(playerModel);
+
+// Body
+const bodyGeo = new THREE.SphereGeometry(1, 12, 8);
+bodyGeo.scale(0.7, 1, 0.5);
+const bodyMat = new THREE.MeshPhongMaterial({ color:0xff5533, emissive:0x331100, shininess:40 });
+const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+playerModel.add(bodyMesh);
+
+// Head
+const headGeo = new THREE.SphereGeometry(0.38, 10, 8);
+const headMat = new THREE.MeshPhongMaterial({ color:0xffcc99, emissive:0x221100 });
+const headMesh = new THREE.Mesh(headGeo, headMat);
+headMesh.position.y = 1.05;
+playerModel.add(headMesh);
+
+// Helmet
+const helmetGeo = new THREE.SphereGeometry(0.42, 10, 6, 0, Math.PI*2, 0, Math.PI*0.6);
+const helmetMat = new THREE.MeshPhongMaterial({ color:0x222222, shininess:80 });
+const helmetMesh = new THREE.Mesh(helmetGeo, helmetMat);
+helmetMesh.position.y = 1.12;
+playerModel.add(helmetMesh);
+
+// Goggles
+const gogGeo = new THREE.SphereGeometry(0.22, 8, 6);
+gogGeo.scale(1.6, 0.6, 0.6);
+const gogMat = new THREE.MeshPhongMaterial({ color:0x44ccff, emissive:0x113344, shininess:100, transparent:true, opacity:0.85 });
+const gogMesh = new THREE.Mesh(gogGeo, gogMat);
+gogMesh.position.set(0, 0.98, 0.28);
+playerModel.add(gogMesh);
+
+// Arms — spread wide in skydive position
+function makeArm(side) {
+  const g = new THREE.CylinderGeometry(0.12, 0.1, 1.4, 6);
+  const m = new THREE.Mesh(g, bodyMat);
+  m.position.set(side * 1.1, 0.1, 0);
+  m.rotation.z = side * 0.7;
+  return m;
+}
+const armL = makeArm(-1); const armR = makeArm(1);
+playerModel.add(armL, armR);
+
+// Legs — slightly spread
+function makeLeg(side) {
+  const g = new THREE.CylinderGeometry(0.13, 0.1, 1.2, 6);
+  const m = new THREE.Mesh(g, bodyMat);
+  m.position.set(side * 0.35, -1.1, 0);
+  m.rotation.z = side * -0.15;
+  return m;
+}
+const legL = makeLeg(-1); const legR = makeLeg(1);
+playerModel.add(legL, legR);
+
+// Trail particles (ring buffer)
+const TRAIL_COUNT = 80;
+const trailGeo = new THREE.BufferGeometry();
+const trailPositions = new Float32Array(TRAIL_COUNT * 3);
+const trailAlphas = new Float32Array(TRAIL_COUNT);
+trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+trailGeo.setAttribute('alpha', new THREE.BufferAttribute(trailAlphas, 1));
+const trailMat = new THREE.ShaderMaterial({
+  transparent: true,
+  depthWrite: false,
+  vertexShader: `
+    attribute float alpha;
+    varying float vAlpha;
+    void main(){
+      vAlpha = alpha;
+      vec4 mv = modelViewMatrix * vec4(position,1.0);
+      gl_PointSize = max(1.0, 6.0 * (200.0 / -mv.z));
+      gl_Position = projectionMatrix * mv;
+    }
+  `,
+  fragmentShader: `
+    varying float vAlpha;
+    void main(){
+      float d = length(gl_PointCoord - vec2(0.5));
+      if(d > 0.5) discard;
+      gl_FragColor = vec4(1.0, 0.55, 0.25, vAlpha * (1.0 - d*2.0));
+    }
+  `
+});
+const trailPoints = new THREE.Points(trailGeo, trailMat);
+scene.add(trailPoints);
+let trailIdx = 0;
+
+// ---- Parachute ----
+const chuteGroup = new THREE.Group();
+chuteGroup.visible = false;
+playerModel.add(chuteGroup);
+
+const canopyGeo = new THREE.SphereGeometry(4, 16, 10, 0, Math.PI*2, 0, Math.PI*0.5);
+const canopyMat = new THREE.MeshPhongMaterial({ color:0xff5533, emissive:0x331100, side:THREE.DoubleSide, transparent:true, opacity:0.85 });
+const canopyMesh = new THREE.Mesh(canopyGeo, canopyMat);
+canopyMesh.position.y = 6;
+canopyMesh.scale.set(1, 0.7, 1);
+chuteGroup.add(canopyMesh);
+
+// Canopy stripes
+for (let i = 0; i < 6; i++) {
+  const stripeGeo = new THREE.SphereGeometry(4.05, 16, 10, i*Math.PI/3, Math.PI/8, 0, Math.PI*0.5);
+  const stripeMat = new THREE.MeshPhongMaterial({ color:0xffffff, emissive:0x222222, side:THREE.DoubleSide, transparent:true, opacity:0.35 });
+  const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+  stripe.position.y = 6;
+  stripe.scale.set(1, 0.7, 1);
+  chuteGroup.add(stripe);
+}
+
+// Lines
+const lineMat = new THREE.LineBasicMaterial({ color:0xffffff, transparent:true, opacity:0.3 });
+for (let i = 0; i < 8; i++) {
+  const angle = (i / 8) * Math.PI * 2;
+  const pts = [
+    new THREE.Vector3(0, 1.5, 0),
+    new THREE.Vector3(Math.cos(angle)*2.5, 4.5, Math.sin(angle)*2.5),
+    new THREE.Vector3(Math.cos(angle)*3.8, 5.8, Math.sin(angle)*3.8)
+  ];
+  const lineGeo = new THREE.BufferGeometry().setFromPoints(pts);
+  chuteGroup.add(new THREE.Line(lineGeo, lineMat));
+}
+
+// ---- Obstacle Pool ----
+let obstacles = [];   // { mesh, bb (Box3), passed, type }
+const obsMaterials = {};
+function getObsMat(color, emissive) {
+  const key = color + '_' + emissive;
+  if (!obsMaterials[key]) {
+    obsMaterials[key] = new THREE.MeshPhongMaterial({ color, emissive, shininess:60, transparent:true, opacity:0.92 });
+  }
+  return obsMaterials[key];
+}
+
+function zoneColors(alt) {
+  if (alt > 6000) return { obs:0x4466ff, em:0x111133, fog:0x0a0a2a, name:'STRATOSPHERE' };
+  if (alt > 4500) return { obs:0x44aaff, em:0x112233, fog:0x0a1a3a, name:'HIGH ALTITUDE' };
+  if (alt > 3000) return { obs:0x66ccee, em:0x112828, fog:0x1a3050, name:'CLOUD LAYER' };
+  if (alt > 1500) return { obs:0xffaa44, em:0x332200, fog:0x2a3a30, name:'TURBULENCE' };
+  if (alt > 750)  return { obs:0xff6644, em:0x331100, fog:0x3a4a30, name:'LOW ALTITUDE' };
+  return              { obs:0xff3333, em:0x330000, fog:0x4a2a20, name:'DANGER ZONE' };
+}
+
+// ---- Obstacle Generation ----
+let nextObsY = 0; // world-Y at which to spawn next row (going negative = downward)
+
+function spawnObstacleRow(worldY) {
+  const progress = 1 - altitude / START_ALT; // 0..1
+  const zc = zoneColors(altitude);
+  const mat = getObsMat(zc.obs, zc.em);
+
+  // Glow edge material
+  const edgeMat = new THREE.MeshPhongMaterial({ color:zc.obs, emissive:zc.obs, transparent:true, opacity:0.3 });
+
+  const type = pickObstacleType(progress);
+
+  switch (type) {
+    case 'beam': {
+      // Beam that spans across the cylinder at a random angle
+      const beamAngle = Math.random() * Math.PI; // random orientation
+      const w = 10 + Math.random() * 22;
+      const h = 1.5 + Math.random() * 1;
+      const d = 3 + Math.random() * 4;
+      const geo = new THREE.BoxGeometry(w, h, d);
+      const mesh = new THREE.Mesh(geo, mat);
+      // Position randomly within cylinder using polar coords
+      const bR = Math.random() * (CORRIDOR_R * 0.7);
+      const bA = Math.random() * Math.PI * 2;
+      mesh.position.set(Math.cos(bA) * bR, worldY, Math.sin(bA) * bR);
+      mesh.rotation.y = beamAngle;
+      scene.add(mesh);
+      addGlowEdge(mesh, w, h, d, edgeMat);
+      const bb = new THREE.Box3().setFromObject(mesh);
+      obstacles.push({ mesh, bb, passed:false, type:'beam', y:worldY, parts:[mesh] });
+      break;
+    }
+    case 'gate': {
+      const gapW = Math.max(8, 16 - progress * 8);
+      const wallAngle = Math.random() * Math.PI; // random orientation across cylinder
+      const wallH = 2.5;
+      const wallD = 3;
+      // Gap position along the wall (offset from center)
+      const gapOffset = (Math.random() - 0.5) * (CORRIDOR_R * 1.2);
+
+      const parts = [];
+      // Left section (from -CORRIDOR_R to gap)
+      const leftLen = CORRIDOR_R + gapOffset - gapW/2;
+      if (leftLen > 2) {
+        const geo = new THREE.BoxGeometry(leftLen, wallH, wallD);
+        const m = new THREE.Mesh(geo, mat);
+        m.position.set(-leftLen/2 - gapW/2 + gapOffset, worldY, 0);
+        m.rotation.y = wallAngle;
+        // Rotate position around center
+        const px = m.position.x, pz = m.position.z;
+        m.position.x = px * Math.cos(wallAngle) - pz * Math.sin(wallAngle);
+        m.position.z = px * Math.sin(wallAngle) + pz * Math.cos(wallAngle);
+        scene.add(m);
+        addGlowEdge(m, leftLen, wallH, wallD, edgeMat);
+        parts.push(m);
+      }
+      // Right section (from gap to +CORRIDOR_R)
+      const rightLen = CORRIDOR_R - gapOffset - gapW/2;
+      if (rightLen > 2) {
+        const geo = new THREE.BoxGeometry(rightLen, wallH, wallD);
+        const m = new THREE.Mesh(geo, mat);
+        m.position.set(rightLen/2 + gapW/2 + gapOffset, worldY, 0);
+        m.rotation.y = wallAngle;
+        const px = m.position.x, pz = m.position.z;
+        m.position.x = px * Math.cos(wallAngle) - pz * Math.sin(wallAngle);
+        m.position.z = px * Math.sin(wallAngle) + pz * Math.cos(wallAngle);
+        scene.add(m);
+        addGlowEdge(m, rightLen, wallH, wallD, edgeMat);
+        parts.push(m);
+      }
+      if (parts.length === 0) break;
+      const bb = new THREE.Box3();
+      parts.forEach(p => bb.union(new THREE.Box3().setFromObject(p)));
+      obstacles.push({ mesh:parts[0], bb, passed:false, type:'gate', y:worldY, parts, gapX:gapOffset, gapW, gapZ:0, wallAngle });
+      break;
+    }
+    case 'pillars': {
+      const count = 3 + Math.floor(Math.random() * 3);
+      const parts = [];
+      for (let i = 0; i < count; i++) {
+        const r = 1 + Math.random() * 2;
+        const h = 4 + Math.random() * 6;
+        const geo = new THREE.CylinderGeometry(r, r, h, 10);
+        const m = new THREE.Mesh(geo, mat);
+        // Polar distribution within cylinder
+        const pR = Math.random() * CORRIDOR_R * 0.85;
+        const pA = Math.random() * Math.PI * 2;
+        m.position.set(Math.cos(pA) * pR, worldY, Math.sin(pA) * pR);
+        scene.add(m);
+        parts.push(m);
+      }
+      const bb = new THREE.Box3();
+      parts.forEach(p => bb.union(new THREE.Box3().setFromObject(p)));
+      obstacles.push({ mesh:parts[0], bb, passed:false, type:'pillars', y:worldY, parts });
+      break;
+    }
+    case 'ring': {
+      const innerR = Math.max(5, 10 - progress * 4);
+      const outerR = innerR + 2;
+      // Rings are OPTIONAL — green/teal to signal "bonus" not "death"
+      const ringObsMat = new THREE.MeshPhongMaterial({ color:0x00ff88, emissive:0x003322, shininess:80, transparent:true, opacity:0.85 });
+      // Build ring from segments
+      const parts = [];
+      const segments = 24;
+      for (let i = 0; i < segments; i++) {
+        const a1 = (i / segments) * Math.PI * 2;
+        const a2 = ((i+1) / segments) * Math.PI * 2;
+        const mx = (Math.cos(a1)+Math.cos(a2))/2 * outerR;
+        const mz = (Math.sin(a1)+Math.sin(a2))/2 * outerR;
+        const segLen = outerR * (Math.PI*2/segments) * 1.05;
+        const geo = new THREE.BoxGeometry(segLen, 2, outerR - innerR);
+        const m = new THREE.Mesh(geo, ringObsMat);
+        m.position.set(mx, worldY, mz);
+        m.rotation.y = -(a1+a2)/2 + Math.PI/2;
+        scene.add(m);
+        parts.push(m);
+      }
+      const bb = new THREE.Box3();
+      parts.forEach(p => bb.union(new THREE.Box3().setFromObject(p)));
+      obstacles.push({ mesh:parts[0], bb, passed:false, type:'ring', y:worldY, parts, innerR, _ringTriggered:false });
+      break;
+    }
+    case 'cross': {
+      const armLen = 10 + Math.random() * 12;
+      const armW = 2 + Math.random() * 2;
+      const parts = [];
+      const rotY = Math.random() * Math.PI;
+      for (let a = 0; a < 2; a++) {
+        const geo = new THREE.BoxGeometry(armLen, 1.8, armW);
+        const m = new THREE.Mesh(geo, mat);
+        m.position.set(0, worldY, 0);
+        m.rotation.y = rotY + a * Math.PI/2;
+        scene.add(m);
+        addGlowEdge(m, armLen, 1.8, armW, edgeMat);
+        parts.push(m);
+      }
+      const bb = new THREE.Box3();
+      parts.forEach(p => bb.union(new THREE.Box3().setFromObject(p)));
+      obstacles.push({ mesh:parts[0], bb, passed:false, type:'cross', y:worldY, parts, rotSpeed:0.005 + Math.random()*0.01 });
+      break;
+    }
+    case 'grid': {
+      const parts = [];
+      // Distribute blocks across the cylinder cross-section
+      const count = 8 + Math.floor(Math.random() * 5);
+      const skipAngle = Math.random() * Math.PI * 2;
+      const skipR = Math.random() * CORRIDOR_R * 0.5 + 2;
+      for (let i = 0; i < count; i++) {
+        const gR = Math.random() * CORRIDOR_R * 0.9;
+        const gA = Math.random() * Math.PI * 2;
+        const gx = Math.cos(gA) * gR;
+        const gz = Math.sin(gA) * gR;
+        // Skip zone — create a navigable gap
+        const distToSkip = Math.sqrt((gx - Math.cos(skipAngle)*skipR)**2 + (gz - Math.sin(skipAngle)*skipR)**2);
+        if (distToSkip < 7) continue;
+        const bw = 4 + Math.random() * 5;
+        const bd = 4 + Math.random() * 5;
+        const geo = new THREE.BoxGeometry(bw, 1.5, bd);
+        const m = new THREE.Mesh(geo, mat);
+        m.position.set(gx, worldY, gz);
+        m.rotation.y = Math.random() * Math.PI;
+        scene.add(m);
+        parts.push(m);
+      }
+      if (parts.length === 0) break;
+      const bb = new THREE.Box3();
+      parts.forEach(p => bb.union(new THREE.Box3().setFromObject(p)));
+      obstacles.push({ mesh:parts[0], bb, passed:false, type:'grid', y:worldY, parts });
+      break;
+    }
+    case 'spinner': {
+      const parts = [];
+      const blades = 2 + Math.floor(Math.random()*2);
+      const pivot = new THREE.Group();
+      const spR = Math.random() * CORRIDOR_R * 0.4;
+      const spA = Math.random() * Math.PI * 2;
+      pivot.position.set(Math.cos(spA)*spR, worldY, Math.sin(spA)*spR);
+      scene.add(pivot);
+      for (let b = 0; b < blades; b++) {
+        const len = 8 + Math.random()*8;
+        const geo = new THREE.BoxGeometry(len, 1.5, 2);
+        const m = new THREE.Mesh(geo, mat);
+        m.rotation.y = (b/blades) * Math.PI;
+        m.position.set(Math.cos(m.rotation.y)*len/2, 0, Math.sin(m.rotation.y)*len/2);
+        pivot.add(m);
+        parts.push(m);
+      }
+      obstacles.push({ mesh:pivot, bb:new THREE.Box3(), passed:false, type:'spinner', y:worldY, parts:[pivot], pivot, rotSpeed:0.008+Math.random()*0.015 });
+      break;
+    }
+    case 'laserH': {
+      // Laser beam spanning across the cylinder at a random angle with gap
+      const laserAngle = Math.random() * Math.PI;
+      const gapW = Math.max(7, 12 - progress*5);
+      const gapCenter = (Math.random()-0.5) * CORRIDOR_R * 0.8;
+      const parts = [];
+      const laserMat = new THREE.MeshPhongMaterial({ color:0xff2244, emissive:0xff1133, transparent:true, opacity:0.7 });
+
+      // Left beam
+      const lLen = CORRIDOR_R + gapCenter - gapW/2;
+      if (lLen > 1) {
+        const geo = new THREE.BoxGeometry(lLen, 0.3, 0.3);
+        const m = new THREE.Mesh(geo, laserMat);
+        const cx = -lLen/2 - gapW/2 + gapCenter;
+        m.position.set(
+          cx * Math.cos(laserAngle),
+          worldY,
+          cx * Math.sin(laserAngle)
+        );
+        m.rotation.y = laserAngle;
+        scene.add(m);
+        parts.push(m);
+      }
+      // Right beam
+      const rLen = CORRIDOR_R - gapCenter - gapW/2;
+      if (rLen > 1) {
+        const geo = new THREE.BoxGeometry(rLen, 0.3, 0.3);
+        const m = new THREE.Mesh(geo, laserMat);
+        const cx = rLen/2 + gapW/2 + gapCenter;
+        m.position.set(
+          cx * Math.cos(laserAngle),
+          worldY,
+          cx * Math.sin(laserAngle)
+        );
+        m.rotation.y = laserAngle;
+        scene.add(m);
+        parts.push(m);
+      }
+      // Emitter nodes
+      const nodeMat = new THREE.MeshPhongMaterial({ color:0xff4466, emissive:0xff2244, shininess:100 });
+      const nodeGeo = new THREE.SphereGeometry(0.5, 8, 6);
+      const gapLx = (gapCenter - gapW/2) * Math.cos(laserAngle);
+      const gapLz = (gapCenter - gapW/2) * Math.sin(laserAngle);
+      const gapRx = (gapCenter + gapW/2) * Math.cos(laserAngle);
+      const gapRz = (gapCenter + gapW/2) * Math.sin(laserAngle);
+      const nL = new THREE.Mesh(nodeGeo, nodeMat);
+      nL.position.set(gapLx, worldY, gapLz);
+      scene.add(nL); parts.push(nL);
+      const nR = new THREE.Mesh(nodeGeo, nodeMat);
+      nR.position.set(gapRx, worldY, gapRz);
+      scene.add(nR); parts.push(nR);
+
+      const bb = new THREE.Box3();
+      parts.forEach(p => bb.union(new THREE.Box3().setFromObject(p)));
+      obstacles.push({ mesh:parts[0], bb, passed:false, type:'laserH', y:worldY, parts, gapCenter, gapW, laserAngle });
+      break;
+    }
+  }
+}
+
+function pickObstacleType(progress) {
+  const pool = ['beam', 'gate'];
+  if (progress > 0.08) pool.push('pillars', 'gate');
+  if (progress > 0.2)  pool.push('ring', 'cross');
+  if (progress > 0.35) pool.push('grid', 'laserH');
+  if (progress > 0.5)  pool.push('spinner', 'cross', 'ring');
+  if (progress > 0.65) pool.push('spinner', 'laserH', 'grid');
+  if (progress > 0.8)  pool.push('laserH', 'ring', 'spinner');
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function addGlowEdge(parent, w, h, d, mat) {
+  const s = 0.08;
+  const geo = new THREE.BoxGeometry(w+s, h+s, d+s);
+  const m = new THREE.Mesh(geo, mat);
+  m.position.copy(parent.position);
+  m.rotation.copy(parent.rotation);
+  scene.add(m);
+  // Store for cleanup
+  if (!parent.userData.edges) parent.userData.edges = [];
+  parent.userData.edges.push(m);
+}
+
+// ---- Clouds (3D planes scattered vertically) ----
+const cloudGroup = new THREE.Group();
+scene.add(cloudGroup);
+const cloudMat = new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.06, side:THREE.DoubleSide, depthWrite:false });
+
+function spawnCloud(yPos) {
+  const geo = new THREE.PlaneGeometry(15+Math.random()*30, 5+Math.random()*10);
+  const m = new THREE.Mesh(geo, cloudMat.clone());
+  m.material.opacity = 0.02 + Math.random()*0.06;
+  // Constrain within cylinder
+  const cR = Math.random() * CORRIDOR_R * 0.8;
+  const cA = Math.random() * Math.PI * 2;
+  m.position.set(Math.cos(cA)*cR, yPos, Math.sin(cA)*cR);
+  m.rotation.x = -Math.PI/2 + (Math.random()-0.5)*0.3;
+  m.rotation.z = Math.random()*Math.PI;
+  cloudGroup.add(m);
+  return m;
+}
+
+let cloudMeshes = [];
+function initClouds() {
+  cloudMeshes.forEach(c => { cloudGroup.remove(c); c.geometry.dispose(); });
+  cloudMeshes = [];
+  for (let i = 0; i < 40; i++) {
+    cloudMeshes.push(spawnCloud(-i * 25 - Math.random()*25));
+  }
+}
+
+// ---- Stars (high altitude) ----
+const starGeo = new THREE.BufferGeometry();
+const starCount = 500;
+const starPos = new Float32Array(starCount * 3);
+for (let i = 0; i < starCount; i++) {
+  starPos[i*3]   = (Math.random()-0.5)*300;
+  starPos[i*3+1] = (Math.random()-0.5)*300;
+  starPos[i*3+2] = (Math.random()-0.5)*300;
+}
+starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+const starMat = new THREE.PointsMaterial({ color:0xffffff, size:0.5, transparent:true, opacity:0.6, depthWrite:false });
+const starField = new THREE.Points(starGeo, starMat);
+scene.add(starField);
+
+// ---- Explosion Particles ----
+const EXPL_COUNT = 200;
+const explGeo = new THREE.BufferGeometry();
+const explPositions = new Float32Array(EXPL_COUNT * 3);
+const explVelocities = new Float32Array(EXPL_COUNT * 3);
+const explAlphas = new Float32Array(EXPL_COUNT);
+const explSizes = new Float32Array(EXPL_COUNT);
+explGeo.setAttribute('position', new THREE.BufferAttribute(explPositions, 3));
+explGeo.setAttribute('alpha', new THREE.BufferAttribute(explAlphas, 1));
+explGeo.setAttribute('size', new THREE.BufferAttribute(explSizes, 1));
+const explMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false,
+  vertexShader:`
+    attribute float alpha;
+    attribute float size;
+    varying float vAlpha;
+    void main(){
+      vAlpha = alpha;
+      vec4 mv = modelViewMatrix * vec4(position,1.0);
+      gl_PointSize = size * (150.0 / -mv.z);
+      gl_Position = projectionMatrix * mv;
+    }
+  `,
+  fragmentShader:`
+    varying float vAlpha;
+    uniform vec3 color;
+    void main(){
+      float d = length(gl_PointCoord - vec2(0.5));
+      if(d > 0.5) discard;
+      gl_FragColor = vec4(color, vAlpha * (1.0 - d*2.0));
+    }
+  `,
+  uniforms:{ color:{ value:new THREE.Color(0xff4444) } }
+});
+const explPoints = new THREE.Points(explGeo, explMat);
+explPoints.visible = false;
+scene.add(explPoints);
+let explLife = 0;
+
+function triggerExplosion(pos, color) {
+  explMat.uniforms.color.value.set(color || 0xff4444);
+  for (let i = 0; i < EXPL_COUNT; i++) {
+    explPositions[i*3]   = pos.x;
+    explPositions[i*3+1] = pos.y;
+    explPositions[i*3+2] = pos.z;
+    const spd = 0.2 + Math.random()*0.8;
+    const theta = Math.random()*Math.PI*2;
+    const phi = Math.random()*Math.PI;
+    explVelocities[i*3]   = Math.sin(phi)*Math.cos(theta)*spd;
+    explVelocities[i*3+1] = Math.sin(phi)*Math.sin(theta)*spd;
+    explVelocities[i*3+2] = Math.cos(phi)*spd;
+    explAlphas[i] = 1;
+    explSizes[i] = 2 + Math.random()*4;
+  }
+  explGeo.attributes.position.needsUpdate = true;
+  explGeo.attributes.alpha.needsUpdate = true;
+  explGeo.attributes.size.needsUpdate = true;
+  explPoints.visible = true;
+  explLife = 1;
+}
+
+function updateExplosion(dt) {
+  if (explLife <= 0) return;
+  explLife -= 0.015 * dt;
+  for (let i = 0; i < EXPL_COUNT; i++) {
+    explPositions[i*3]   += explVelocities[i*3]   * dt;
+    explPositions[i*3+1] += explVelocities[i*3+1] * dt;
+    explPositions[i*3+2] += explVelocities[i*3+2] * dt;
+    explVelocities[i*3+1] -= 0.005 * dt;
+    explAlphas[i] = Math.max(0, explLife);
+  }
+  explGeo.attributes.position.needsUpdate = true;
+  explGeo.attributes.alpha.needsUpdate = true;
+  if (explLife <= 0) explPoints.visible = false;
+}
+
+// ---- Corridor Cylinder (translucent boundary) ----
+const cylHeight = 800;
+const cylGeo = new THREE.CylinderGeometry(CORRIDOR_R, CORRIDOR_R, cylHeight, 48, 1, true);
+const cylMat = new THREE.MeshPhongMaterial({
+  color: 0x4488cc,
+  emissive: 0x112244,
+  transparent: true,
+  opacity: 0.06,
+  side: THREE.DoubleSide,
+  depthWrite: false,
+  shininess: 80
+});
+const corridorCylinder = new THREE.Mesh(cylGeo, cylMat);
+corridorCylinder.position.y = -cylHeight / 2 + 50;
+scene.add(corridorCylinder);
+
+// Wireframe overlay for depth perception
+const cylWireGeo = new THREE.CylinderGeometry(CORRIDOR_R, CORRIDOR_R, cylHeight, 24, 20, true);
+const cylWireMat = new THREE.MeshBasicMaterial({
+  color: 0x4488cc,
+  transparent: true,
+  opacity: 0.04,
+  wireframe: true,
+  depthWrite: false
+});
+const corridorWire = new THREE.Mesh(cylWireGeo, cylWireMat);
+corridorWire.position.y = -cylHeight / 2 + 50;
+scene.add(corridorWire);
+
+// Top/bottom ring glow lines for orientation
+const ringGeo = new THREE.RingGeometry(CORRIDOR_R - 0.15, CORRIDOR_R + 0.15, 48);
+const ringMat = new THREE.MeshBasicMaterial({ color: 0x4488cc, transparent: true, opacity: 0.15, side: THREE.DoubleSide, depthWrite: false });
+const topRing = new THREE.Mesh(ringGeo, ringMat);
+topRing.rotation.x = -Math.PI / 2;
+topRing.position.y = 40;
+scene.add(topRing);
+
+// Keep reference for position updates
+const wallSegments = [corridorCylinder, corridorWire, topRing];
+
+// ---- Input ----
+const input = { left:false, right:false, up:false, down:false };
+
+document.addEventListener('keydown', e => {
+  if (e.key==='ArrowLeft'||e.key==='a'||e.key==='A') input.left=true;
+  if (e.key==='ArrowRight'||e.key==='d'||e.key==='D') input.right=true;
+  if (e.key==='ArrowUp'||e.key==='w'||e.key==='W') input.up=true;
+  if (e.key==='ArrowDown'||e.key==='s'||e.key==='S') input.down=true;
+  if ((e.key===' '||e.key==='Enter') && state===S.MENU) startGame();
+});
+document.addEventListener('keyup', e => {
+  if (e.key==='ArrowLeft'||e.key==='a'||e.key==='A') input.left=false;
+  if (e.key==='ArrowRight'||e.key==='d'||e.key==='D') input.right=false;
+  if (e.key==='ArrowUp'||e.key==='w'||e.key==='W') input.up=false;
+  if (e.key==='ArrowDown'||e.key==='s'||e.key==='S') input.down=false;
+});
+
+// Touch: drag-based (fallback, still works alongside dpad)
+let touchStartX = null, touchStartY = null, touchDX = 0, touchDZ = 0;
+
+// ---- Mobile Detection & D-Pad ----
+const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  || ('ontouchstart' in window && navigator.maxTouchPoints > 1);
+
+const dpadEl = document.getElementById('mobile-dpad');
+if (isMobile) {
+  dpadEl.style.display = 'block';
+
+  // Track which directions are active (supports multi-touch on dpad)
+  const dpadState = { up:false, down:false, left:false, right:false };
+
+  function updateInputFromDpad() {
+    input.up    = dpadState.up;
+    input.down  = dpadState.down;
+    input.left  = dpadState.left;
+    input.right = dpadState.right;
+  }
+
+  function getDirFromTouch(touch) {
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (el && el.closest && el.closest('.dpad-btn')) {
+      return el.closest('.dpad-btn').dataset.dir;
+    }
+    return null;
+  }
+
+  // Handle touch events on the dpad container
+  dpadEl.addEventListener('touchstart', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    for (const touch of e.changedTouches) {
+      const dir = getDirFromTouch(touch);
+      if (dir) {
+        dpadState[dir] = true;
+        document.getElementById('dpad-' + dir).classList.add('active');
+      }
+    }
+    updateInputFromDpad();
+  }, { passive:false });
+
+  dpadEl.addEventListener('touchmove', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Reset all then re-detect from all current touches
+    dpadState.up = dpadState.down = dpadState.left = dpadState.right = false;
+    document.querySelectorAll('.dpad-btn').forEach(b => b.classList.remove('active'));
+    for (const touch of e.touches) {
+      const dir = getDirFromTouch(touch);
+      if (dir) {
+        dpadState[dir] = true;
+        document.getElementById('dpad-' + dir).classList.add('active');
+      }
+    }
+    updateInputFromDpad();
+  }, { passive:false });
+
+  dpadEl.addEventListener('touchend', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Re-check remaining touches
+    dpadState.up = dpadState.down = dpadState.left = dpadState.right = false;
+    document.querySelectorAll('.dpad-btn').forEach(b => b.classList.remove('active'));
+    for (const touch of e.touches) {
+      const dir = getDirFromTouch(touch);
+      if (dir) {
+        dpadState[dir] = true;
+        document.getElementById('dpad-' + dir).classList.add('active');
+      }
+    }
+    updateInputFromDpad();
+  }, { passive:false });
+
+  dpadEl.addEventListener('touchcancel', e => {
+    dpadState.up = dpadState.down = dpadState.left = dpadState.right = false;
+    document.querySelectorAll('.dpad-btn').forEach(b => b.classList.remove('active'));
+    updateInputFromDpad();
+  }, { passive:false });
+
+  // Start game on tap anywhere else
+  document.addEventListener('touchstart', e => {
+    if (state === S.MENU && !e.target.closest('#mobile-dpad') && !e.target.closest('.play-btn') && !e.target.closest('.retry-btn')) {
+      startGame();
+    }
+  }, { passive:false });
+} else {
+  // Desktop: no dpad needed, keep the old fallback touch drag for tablets with keyboards
+  document.addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (state === S.MENU) { startGame(); return; }
+    const t = e.touches[0];
+    touchStartX = t.clientX;
+    touchStartY = t.clientY;
+  }, { passive:false });
+  document.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (touchStartX === null) return;
+    const t = e.touches[0];
+    touchDX = (t.clientX - touchStartX) / (innerWidth * 0.15);
+    touchDZ = (t.clientY - touchStartY) / (innerHeight * 0.2);
+    touchDX = Math.max(-1, Math.min(1, touchDX));
+    touchDZ = Math.max(-1, Math.min(1, touchDZ));
+  }, { passive:false });
+  document.addEventListener('touchend', () => {
+    touchStartX = null; touchDX = 0; touchDZ = 0;
+  });
+}
+
+// Update controls hint for mobile
+if (isMobile) {
+  const hint = document.getElementById('controls-info');
+  if (hint) hint.innerHTML = 'USE THE D-PAD TO STEER<br>DODGE EVERYTHING — SURVIVE THE FALL';
+}
+
+// ---- Buttons ----
+document.getElementById('btn-start').addEventListener('click', startGame);
+document.getElementById('btn-win').addEventListener('click', startGame);
+document.getElementById('btn-death').addEventListener('click', startGame);
+
+// ---- HUD helpers ----
+const hAlt = document.getElementById('h-alt');
+const hSpd = document.getElementById('h-spd');
+const hZone = document.getElementById('h-zone');
+const altFill = document.getElementById('alt-fill');
+const comboEl = document.getElementById('combo');
+const nearmissEl = document.getElementById('nearmiss');
+const speedbrakeEl = document.getElementById('speedbrake');
+const zoneBanner = document.getElementById('zone-banner');
+const warnEl = document.getElementById('warn');
+let comboHideTimer = 0;
+let nmHideTimer = 0;
+let sbHideTimer = 0;
+let zoneBannerTimer = 0;
+
+function updateHUD() {
+  hAlt.textContent = Math.floor(altitude).toLocaleString();
+  const mph = Math.floor(speed * 30);
+  const atTerminal = mph >= TERMINAL_VEL - 1;
+  hSpd.innerHTML = mph + ' <small>MPH</small>' + (atTerminal ? ' <small style="color:#ff4444;opacity:0.7">MAX</small>' : '');
+  const zc = zoneColors(altitude);
+  hZone.textContent = zc.name;
+  altFill.style.height = ((altitude/START_ALT)*100) + '%';
+
+  // Zone change
+  if (zc.name !== lastZoneName) {
+    lastZoneName = zc.name;
+    zoneBanner.textContent = zc.name;
+    zoneBanner.style.opacity = '1';
+    zoneBannerTimer = 120;
+  }
+  if (zoneBannerTimer > 0) {
+    zoneBannerTimer--;
+    if (zoneBannerTimer <= 0) zoneBanner.style.opacity = '0';
+  }
+
+  // Warning
+  if (altitude < 1000 && state === S.PLAY) {
+    warnEl.classList.add('danger');
+  } else {
+    warnEl.classList.remove('danger');
+  }
+}
+
+function showCombo(n) {
+  comboEl.textContent = n + 'x COMBO';
+  comboEl.style.opacity = '1';
+  comboEl.style.fontSize = Math.min(72, 36 + n * 3) + 'px';
+  comboHideTimer = 60;
+}
+function showNearMiss() {
+  nearmissEl.textContent = 'NEAR MISS';
+  nearmissEl.style.opacity = '1';
+  nmHideTimer = 40;
+}
+function showSpeedBrake() {
+  speedbrakeEl.textContent = 'SPEED BRAKE  −15 MPH';
+  speedbrakeEl.style.opacity = '1';
+  sbHideTimer = 70;
+}
+
+// ---- Cleanup ----
+function clearObstacles() {
+  obstacles.forEach(o => {
+    o.parts.forEach(p => {
+      if (p.userData && p.userData.edges) {
+        p.userData.edges.forEach(e => { scene.remove(e); e.geometry.dispose(); });
+      }
+      scene.remove(p);
+      if (p.geometry) p.geometry.dispose();
+      // Groups
+      if (p.children) {
+        p.children.forEach(c => { if(c.geometry) c.geometry.dispose(); });
+      }
+    });
+  });
+  obstacles = [];
+}
+
+// ---- Collision ----
+// Proper OBB collision: transform player sphere into mesh LOCAL space,
+// then check against the geometry's local bounding box.
+// This eliminates AABB inflation from rotated objects.
+const _localPlayer = new THREE.Vector3();
+const _invMat = new THREE.Matrix4();
+const _localClosest = new THREE.Vector3();
+
+function sphereVsMesh(px, py, pz, r, mesh) {
+  // For groups, recurse into children
+  if (mesh.isGroup) {
+    for (const child of mesh.children) {
+      if ((child.isMesh || child.isGroup) && sphereVsMesh(px, py, pz, r, child)) return true;
+    }
+    return false;
+  }
+  if (!mesh.geometry) return false;
+
+  // Ensure geometry has a computed local bounding box
+  if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+  const localBB = mesh.geometry.boundingBox;
+
+  // Get mesh's world matrix and invert it
+  mesh.updateMatrixWorld(true);
+  _invMat.copy(mesh.matrixWorld).invert();
+
+  // Transform player world position into mesh's local space
+  _localPlayer.set(px, py, pz);
+  _localPlayer.applyMatrix4(_invMat);
+
+  // Now clamp to local AABB (which is axis-aligned in local space — correct!)
+  _localClosest.set(
+    Math.max(localBB.min.x, Math.min(_localPlayer.x, localBB.max.x)),
+    Math.max(localBB.min.y, Math.min(_localPlayer.y, localBB.max.y)),
+    Math.max(localBB.min.z, Math.min(_localPlayer.z, localBB.max.z))
+  );
+
+  // Distance in local space
+  const dx = _localPlayer.x - _localClosest.x;
+  const dy = _localPlayer.y - _localClosest.y;
+  const dz = _localPlayer.z - _localClosest.z;
+
+  // Compare against hitbox radius
+  // Note: if mesh has non-uniform scale, r should be scaled too,
+  // but our obstacles use uniform scale so this is fine
+  return (dx*dx + dy*dy + dz*dz) < r*r;
+}
+
+function checkCollision() {
+  const px = playerGroup.position.x;
+  const py = playerGroup.position.y;
+  const pz = playerGroup.position.z;
+  const r = PLAYER_HITBOX;
+
+  // Y tolerance: scale with speed so fast movement doesn't skip frames
+  const yTol = 3 + speed * 0.8;
+
+  for (const obs of obstacles) {
+    if (obs.passed) continue;
+    if (Math.abs(py - obs.y) > yTol) continue;
+
+    // Ring: optional bonus. Segments are solid (kill on hit).
+    // Flying through the center hole = speed reduction reward.
+    // Flying around the outside = safe, no penalty.
+    if (obs.type === 'ring') {
+      // Check if player hits any ring SEGMENT (these are solid)
+      for (const part of obs.parts) {
+        if (sphereVsMesh(px, py, pz, r, part)) return obs;
+      }
+      // Check if player passes through the hole (reward)
+      if (!obs._ringTriggered) {
+        const dy = Math.abs(py - obs.y);
+        if (dy < 2.5) {
+          const dist = Math.sqrt(px*px + pz*pz);
+          if (dist < obs.innerR - r) {
+            obs._ringTriggered = true;
+            // Speed brake reward!
+            speed = Math.max(0.3, speed - 15 / 30); // reduce by 15 mph
+            ringsHit++;
+            showSpeedBrake();
+          }
+        }
+      }
+      continue;
+    }
+
+    // All other types: per-mesh OBB sphere collision check
+    for (const part of obs.parts) {
+      if (sphereVsMesh(px, py, pz, r, part)) return obs;
+    }
+  }
+  return null;
+}
+
+// ---- Near miss ----
+function nearestDistToObs(px, py, pz, obs) {
+  let minDist = Infinity;
+  for (const part of obs.parts) {
+    const meshes = part.isGroup ? part.children.filter(c => c.isMesh) : [part];
+    for (const mesh of meshes) {
+      if (!mesh.geometry) continue;
+      if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+      const localBB = mesh.geometry.boundingBox;
+
+      mesh.updateMatrixWorld(true);
+      _invMat.copy(mesh.matrixWorld).invert();
+
+      _localPlayer.set(px, py, pz);
+      _localPlayer.applyMatrix4(_invMat);
+
+      _localClosest.set(
+        Math.max(localBB.min.x, Math.min(_localPlayer.x, localBB.max.x)),
+        Math.max(localBB.min.y, Math.min(_localPlayer.y, localBB.max.y)),
+        Math.max(localBB.min.z, Math.min(_localPlayer.z, localBB.max.z))
+      );
+      const dx = _localPlayer.x - _localClosest.x;
+      const dy = _localPlayer.y - _localClosest.y;
+      const dz = _localPlayer.z - _localClosest.z;
+      minDist = Math.min(minDist, Math.sqrt(dx*dx + dy*dy + dz*dz));
+    }
+  }
+  return minDist;
+}
+
+function checkNearMiss() {
+  const px = playerGroup.position.x;
+  const py = playerGroup.position.y;
+  const pz = playerGroup.position.z;
+
+  for (const obs of obstacles) {
+    if (obs.passed || obs._nearMissed) continue;
+    if (Math.abs(py - obs.y) > 5) continue;
+
+    const dist = nearestDistToObs(px, py, pz, obs);
+
+    if (dist < 3.5 && dist > PLAYER_HITBOX) {
+      obs._nearMissed = true;
+      nearMisses++;
+      showNearMiss();
+    }
+  }
+}
+
+// ---- Start / Reset ----
+function startGame() {
+  state = S.PLAY;
+  altitude = START_ALT;
+  speed = 0; maxSpd = 0;
+  playerVX = 0; playerVZ = 0;
+  tiltX = 0; tiltZ = 0;
+  gameTime = 0;
+  obsPassed = 0; nearMisses = 0; ringsHit = 0;
+  combo = 0; maxCombo = 0; comboTime = 0;
+  dieTimer = 0; chuteTimer = 0;
+  fallDist = 0;
+  nextObsY = -80; // further initial gap to give player breathing room
+  lastZoneName = '';
+  shakeAmt = 0;
+  invulnFrames = 90; // ~1.5 seconds grace period
+
+  clearObstacles();
+  playerGroup.position.set(0, 0, 0);
+  playerGroup.rotation.set(0, 0, 0);
+  playerGroup.visible = true;
+  trailPoints.visible = true;
+  chuteGroup.visible = false;
+  chuteGroup.scale.set(0,0,0);
+  explPoints.visible = false;
+  document.getElementById('chute-cinema').classList.remove('show');
+
+  initClouds();
+
+  // Hide screens, show HUD
+  document.getElementById('start-screen').classList.remove('show');
+  document.getElementById('win-screen').classList.remove('show');
+  document.getElementById('death-screen').classList.remove('show');
+  document.getElementById('hud').classList.add('show');
+  document.getElementById('alt-track').classList.add('show');
+}
+
+// ---- End Screens ----
+function showWin() {
+  state = S.WIN;
+  document.getElementById('chute-cinema').classList.remove('show');
+  const t = (gameTime / 60).toFixed(1);
+  document.getElementById('win-stats').innerHTML = `
+    OBSTACLES CLEARED: <span>${obsPassed}</span><br>
+    RINGS THREADED: <span>${ringsHit}</span><br>
+    TOP SPEED: <span>${Math.floor(maxSpd*30)} MPH</span><br>
+    NEAR MISSES: <span>${nearMisses}</span><br>
+    BEST COMBO: <span>${maxCombo}x</span><br>
+    FLIGHT TIME: <span>${t}s</span>
+  `;
+  document.getElementById('win-screen').classList.add('show');
+  document.getElementById('hud').classList.remove('show');
+  document.getElementById('alt-track').classList.remove('show');
+}
+
+function showDeath() {
+  state = S.DYING;
+  dieTimer = 0;
+  shakeAmt = 1.5;
+  triggerExplosion(playerGroup.position.clone(), 0xff4444);
+  playerGroup.visible = false;
+}
+
+function showDeathScreen() {
+  state = S.WIN; // prevent further updates
+  const altLost = START_ALT - Math.floor(altitude);
+  document.getElementById('death-stats').innerHTML = `
+    ALTITUDE LOST: <span>${altLost.toLocaleString()} FT</span><br>
+    OBSTACLES CLEARED: <span>${obsPassed}</span><br>
+    RINGS THREADED: <span>${ringsHit}</span><br>
+    TOP SPEED: <span>${Math.floor(maxSpd*30)} MPH</span><br>
+    NEAR MISSES: <span>${nearMisses}</span><br>
+    BEST COMBO: <span>${maxCombo}x</span>
+  `;
+  document.getElementById('death-screen').classList.add('show');
+  document.getElementById('hud').classList.remove('show');
+  document.getElementById('alt-track').classList.remove('show');
+}
+
+// ---- Main Loop ----
+let prevTime = performance.now();
+
+function loop(time) {
+  requestAnimationFrame(loop);
+  const rawDt = (time - prevTime) / 16.67;
+  const dt = Math.min(rawDt, 3);
+  prevTime = time;
+
+  if (state === S.MENU) {
+    // Gentle camera rotation on menu
+    camera.position.set(Math.sin(time*0.0003)*8, 15, Math.cos(time*0.0003)*8);
+    camera.lookAt(0, -10, 0);
+    starField.visible = true;
+    starField.rotation.y = time * 0.00005;
+    scene.fog.color.set(0x0a0a1a);
+    renderer.setClearColor(0x0a0a1a);
+    renderer.render(scene, camera);
+    return;
+  }
+
+  // ---- PLAY STATE ----
+  if (state === S.PLAY) {
+    gameTime += dt;
+
+    // Speed ramp — slow ease-in, gradual build, punchy final 20%
+    const progress = 1 - altitude / START_ALT;
+    // Quadratic ease: crawls at start, builds momentum mid-game, kicks hard last 20%
+    const eased = progress < 0.8
+      ? progress * progress * 1.5   // gentle quadratic 0→0.96
+      : 0.96 + (progress - 0.8) * 4.0; // sharp final ramp 0.96→1.76
+    const targetSpeed = 0.6 + eased * 2.8;
+    speed += (targetSpeed - speed) * 0.006 * dt;
+    speed = Math.min(speed, TERMINAL_SPD); // terminal velocity cap
+    maxSpd = Math.max(maxSpd, speed);
+
+    // Altitude
+    altitude -= speed * 1.8 * dt;
+
+    // Check deploy
+    if (altitude <= DEPLOY_ALT) {
+      state = S.CHUTE;
+      chuteTimer = 0;
+      chutePhase = 0; // 0=reach, 1=pull, 2=deploy, 3=float, 4=land
+      chutePhaseTime = 0;
+      playerGroup.visible = false;
+      trailPoints.visible = false;
+      // Hide HUD, show cinema
+      document.getElementById('hud').classList.remove('show');
+      document.getElementById('alt-track').classList.remove('show');
+      document.getElementById('chute-cinema').classList.add('show');
+      initChuteCanvas();
+      return;
+    }
+
+    // Player movement
+    let moveX = 0, moveZ = 0;
+    if (input.left)  moveX -= 1;
+    if (input.right) moveX += 1;
+    if (input.up)    moveZ -= 1;
+    if (input.down)  moveZ += 1;
+
+    // Touch
+    if (touchStartX !== null) {
+      moveX += touchDX;
+      moveZ += touchDZ;
+    }
+
+    const accel = 0.06 * dt;
+    const friction = 0.90;
+    playerVX += moveX * accel;
+    playerVZ += moveZ * accel;
+    playerVX *= friction;
+    playerVZ *= friction;
+
+    playerGroup.position.x += playerVX * dt;
+    playerGroup.position.z += playerVZ * dt;
+
+    // Clamp to cylinder
+    const distFromCenter = Math.sqrt(playerGroup.position.x ** 2 + playerGroup.position.z ** 2);
+    const maxR = CORRIDOR_R - 2;
+    if (distFromCenter > maxR) {
+      const angle = Math.atan2(playerGroup.position.z, playerGroup.position.x);
+      playerGroup.position.x = Math.cos(angle) * maxR;
+      playerGroup.position.z = Math.sin(angle) * maxR;
+      // Kill velocity component pointing outward
+      const nx = Math.cos(angle), nz = Math.sin(angle);
+      const dot = playerVX * nx + playerVZ * nz;
+      if (dot > 0) { playerVX -= dot * nx * 0.8; playerVZ -= dot * nz * 0.8; }
+    }
+
+    // Tilt
+    tiltX += (playerVX * 8 - tiltX) * 0.1 * dt;
+    tiltZ += (-playerVZ * 5 - tiltZ) * 0.1 * dt;
+    playerGroup.rotation.z = -tiltX;
+    playerGroup.rotation.x = tiltZ * 0.5;
+
+    // Arm spread based on tilt
+    armL.rotation.z = -0.7 - Math.abs(tiltX)*0.3;
+    armR.rotation.z = 0.7 + Math.abs(tiltX)*0.3;
+
+    // Move world downward (player stays at y~0, world moves up)
+    const fallStep = speed * 1.6 * dt;
+    fallDist += fallStep;
+
+    // Move obstacles up
+    obstacles.forEach(o => {
+      o.y += fallStep;
+      o.parts.forEach(p => {
+        if (p.isGroup) {
+          p.position.y += fallStep;
+        } else {
+          p.position.y += fallStep;
+        }
+        if (p.userData && p.userData.edges) {
+          p.userData.edges.forEach(e => e.position.y += fallStep);
+        }
+      });
+
+      // Spinners rotate
+      if (o.type === 'spinner' && o.pivot) {
+        o.pivot.rotation.y += o.rotSpeed * dt;
+      }
+      if (o.type === 'cross') {
+        o.parts.forEach(p => p.rotation.y += o.rotSpeed * dt);
+      }
+
+      // Check passed
+      if (!o.passed && o.y > 10) {
+        o.passed = true;
+        obsPassed++;
+        combo++;
+        comboTime = 90;
+        maxCombo = Math.max(maxCombo, combo);
+        if (combo >= 3) showCombo(combo);
+      }
+    });
+
+    // Remove far obstacles
+    const toRemove = obstacles.filter(o => o.y > 80);
+    toRemove.forEach(o => {
+      o.parts.forEach(p => {
+        if (p.userData && p.userData.edges) {
+          p.userData.edges.forEach(e => { scene.remove(e); e.geometry.dispose(); });
+        }
+        scene.remove(p);
+        if (p.geometry) p.geometry.dispose();
+        if (p.children) p.children.forEach(c => { scene.remove(c); if(c.geometry) c.geometry.dispose(); });
+      });
+    });
+    obstacles = obstacles.filter(o => o.y <= 80);
+
+    // Spawn new obstacles
+    while (nextObsY + fallDist > -300) {
+      const worldY = nextObsY;
+      spawnObstacleRow(worldY);
+      const progress2 = 1 - altitude / START_ALT;
+      nextObsY -= OBS_SPACING * Math.max(0.55, 1.3 - progress2 * 0.75);
+    }
+
+    // Move clouds
+    cloudMeshes.forEach(c => {
+      c.position.y += fallStep * 0.6;
+      if (c.position.y > 80) c.position.y -= 1000;
+    });
+
+    // Move cylinder with player
+    corridorCylinder.position.y = playerGroup.position.y - cylHeight/2 + 50;
+    corridorWire.position.y = playerGroup.position.y - cylHeight/2 + 50;
+    topRing.position.y = playerGroup.position.y + 40;
+
+    // Combo timer
+    if (comboTime > 0) {
+      comboTime -= dt;
+      if (comboTime <= 0) combo = 0;
+    }
+    if (comboHideTimer > 0) { comboHideTimer -= dt; if(comboHideTimer<=0) comboEl.style.opacity='0'; }
+    if (nmHideTimer > 0) { nmHideTimer -= dt; if(nmHideTimer<=0) nearmissEl.style.opacity='0'; }
+    if (sbHideTimer > 0) { sbHideTimer -= dt; if(sbHideTimer<=0) speedbrakeEl.style.opacity='0'; }
+
+    // Collision (skip during grace period)
+    if (invulnFrames > 0) {
+      invulnFrames -= dt;
+    } else {
+      const hit = checkCollision();
+      if (hit) {
+        showDeath();
+        return;
+      }
+    }
+
+    // Near miss
+    checkNearMiss();
+
+    // Trail
+    trailPositions[trailIdx*3]   = playerGroup.position.x + (Math.random()-0.5)*0.5;
+    trailPositions[trailIdx*3+1] = playerGroup.position.y + 1.5;
+    trailPositions[trailIdx*3+2] = playerGroup.position.z + (Math.random()-0.5)*0.5;
+    trailAlphas[trailIdx] = 0.7;
+    trailIdx = (trailIdx + 1) % TRAIL_COUNT;
+    for (let i = 0; i < TRAIL_COUNT; i++) {
+      trailAlphas[i] = Math.max(0, trailAlphas[i] - 0.012 * dt);
+      trailPositions[i*3+1] += fallStep * 0.3; // trail drifts up relative
+    }
+    trailGeo.attributes.position.needsUpdate = true;
+    trailGeo.attributes.alpha.needsUpdate = true;
+
+    updateHUD();
+  }
+
+  // ---- CHUTE STATE — Cinematic Parachute Sequence ----
+  if (state === S.CHUTE) {
+    chuteTimer += dt;
+    chutePhaseTime += dt;
+    updateChuteAnimation(dt, time);
+
+    // 3D scene still renders softly in background
+    const fallStep = 0.2 * dt;
+    cloudMeshes.forEach(c => { c.position.y += fallStep * 0.3; });
+
+    if (chutePhase >= 5) {
+      document.getElementById('chute-cinema').classList.remove('show');
+      showWin();
+      return;
+    }
+  }
+
+  // ---- DYING STATE ----
+  if (state === S.DYING) {
+    dieTimer += dt;
+    updateExplosion(dt);
+    shakeAmt *= 0.96;
+    if (dieTimer > 80) showDeathScreen();
+  }
+
+  // ---- Camera ----
+  const camTargetX = playerGroup.position.x * 0.5;
+  const camTargetZ = playerGroup.position.z * 0.3;
+  const camHeight = state === S.CHUTE ? 22 + chuteTimer * 0.05 : 18;
+  const camBack = state === S.CHUTE ? 8 : 5 + speed * 0.3;
+
+  camera.position.x += (camTargetX - camera.position.x) * 0.05 * dt;
+  camera.position.y += (camHeight - camera.position.y) * 0.05 * dt;
+  camera.position.z += (camTargetZ + camBack - camera.position.z) * 0.05 * dt;
+
+  // Shake
+  if (shakeAmt > 0.01) {
+    camera.position.x += (Math.random()-0.5) * shakeAmt;
+    camera.position.y += (Math.random()-0.5) * shakeAmt;
+  }
+
+  camera.lookAt(playerGroup.position.x, playerGroup.position.y - 15, playerGroup.position.z - 5);
+
+  // ---- Environment ----
+  const zc = zoneColors(altitude);
+  const fogColor = new THREE.Color(zc.fog);
+  scene.fog.color.lerp(fogColor, 0.02 * dt);
+  renderer.setClearColor(scene.fog.color);
+
+  // Cylinder color shifts with zone
+  const zoneCol = new THREE.Color(zc.obs);
+  cylMat.color.lerp(zoneCol, 0.02 * dt);
+  cylMat.emissive.lerp(new THREE.Color(zc.em), 0.02 * dt);
+  cylMat.opacity = 0.05 + Math.sin(time * 0.001) * 0.015;
+  cylWireMat.color.lerp(zoneCol, 0.02 * dt);
+  cylWireMat.opacity = 0.03 + Math.sin(time * 0.0015) * 0.01;
+  ringMat.color.lerp(zoneCol, 0.02 * dt);
+
+  // Stars fade with altitude
+  starField.visible = altitude > 3000;
+  if (starField.visible) {
+    starMat.opacity = Math.min(0.6, (altitude - 3000) / 3000);
+    starField.rotation.y = time * 0.00003;
+  }
+
+  // Ambient light shifts
+  ambLight.color.lerp(fogColor, 0.01 * dt);
+
+  // Explosion
+  updateExplosion(dt);
+
+  renderer.render(scene, camera);
+}
+
+requestAnimationFrame(loop);
+
+// ═══════════════════════════════════════════════════════════
+// CINEMATIC PARACHUTE SEQUENCE — Full-screen 2D Canvas
+// ═══════════════════════════════════════════════════════════
+let chutePhase = 0;     // 0:reach 1:pull 2:deploy 3:float 4:land 5:done
+let chutePhaseTime = 0;
+let cCtx, cW, cH;
+let chuteParticles = [];
+
+// Phase durations (in frames at ~60fps)
+const PHASE_DUR = [55, 40, 75, 220, 65];
+
+function initChuteCanvas() {
+  const cc = document.getElementById('chute-canvas');
+  cW = cc.width = innerWidth;
+  cH = cc.height = innerHeight;
+  cCtx = cc.getContext('2d');
+  chuteParticles = [];
+  for (let i = 0; i < 60; i++) {
+    chuteParticles.push({
+      x: Math.random() * cW,
+      y: Math.random() * cH,
+      speed: 3 + Math.random() * 8,
+      len: 20 + Math.random() * 60,
+      alpha: 0.1 + Math.random() * 0.2
+    });
+  }
+}
+
+function advancePhase() {
+  chutePhase++;
+  chutePhaseTime = 0;
+}
+
+function easeOutBack(t) {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
+function easeOutElastic(t) {
+  if (t === 0 || t === 1) return t;
+  return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * (2 * Math.PI) / 3) + 1;
+}
+
+function updateChuteAnimation(dt, time) {
+  if (!cCtx) return;
+  const t = chutePhaseTime;
+  const dur = PHASE_DUR[chutePhase] || 999;
+  const progress = Math.min(1, t / dur);
+
+  cCtx.clearRect(0, 0, cW, cH);
+
+  // Sky background — lightens as we descend
+  const skyDark = chutePhase < 3 ? 0.85 : Math.max(0.35, 0.85 - (chutePhase === 3 ? progress * 0.5 : 0.5));
+  const skyGrad = cCtx.createLinearGradient(0, 0, 0, cH);
+  skyGrad.addColorStop(0, `rgba(${Math.floor(30*skyDark)},${Math.floor(60*skyDark)},${Math.floor(130*skyDark)},1)`);
+  skyGrad.addColorStop(1, `rgba(${Math.floor(50*skyDark)},${Math.floor(100*skyDark)},${Math.floor(85*skyDark)},1)`);
+  cCtx.fillStyle = skyGrad;
+  cCtx.fillRect(0, 0, cW, cH);
+
+  // Wind streaks
+  const windMult = chutePhase < 2 ? 1 : chutePhase === 2 ? (1 - progress * 0.85) : 0.08;
+  chuteParticles.forEach(p => {
+    p.y += p.speed * windMult * dt;
+    if (p.y > cH + 50) { p.y = -50; p.x = Math.random() * cW; }
+    cCtx.strokeStyle = `rgba(255,255,255,${p.alpha * windMult})`;
+    cCtx.lineWidth = 1;
+    cCtx.beginPath();
+    cCtx.moveTo(p.x, p.y);
+    cCtx.lineTo(p.x + (Math.random()-0.5)*2, p.y + p.len * windMult);
+    cCtx.stroke();
+  });
+
+  // Background clouds
+  const cloudBaseY = chutePhase >= 3 ? cH * 0.12 - progress * cH * 0.35 : cH * 0.12;
+  for (let i = 0; i < 5; i++) {
+    const ccx = cW * (0.1 + i * 0.2) + Math.sin(time * 0.0003 + i * 1.7) * 30;
+    const ccy = cloudBaseY + i * 18;
+    const cAlpha = chutePhase >= 3 ? Math.max(0, 0.07 - progress * 0.05) : 0.07;
+    cCtx.fillStyle = `rgba(255,255,255,${cAlpha})`;
+    cCtx.beginPath();
+    cCtx.ellipse(ccx, ccy, 90 + i*25, 16 + i*6, 0, 0, Math.PI*2);
+    cCtx.fill();
+  }
+
+  // ---- CHARACTER ----
+  const charCX = cW / 2;
+  const charBaseY = cH * 0.5;
+  const floatDrift = chutePhase === 3 ? progress * cH * 0.18 : (chutePhase === 4 ? cH * 0.18 + progress * cH * 0.06 : 0);
+  const charSway = chutePhase >= 2 ? Math.sin(time * 0.002) * 10 * (chutePhase >= 3 ? 1 : progress) : 0;
+  const charY = charBaseY + floatDrift;
+  const charX = charCX + charSway;
+
+  const sc = chutePhase === 0 ? 1.0 :
+             chutePhase === 1 ? 1.0 + progress * 0.3 :
+             chutePhase === 2 ? 1.3 - progress * 0.15 :
+             chutePhase === 3 ? 1.15 - progress * 0.15 :
+             1.0 - progress * 0.15;
+
+  cCtx.save();
+  cCtx.translate(charX, charY);
+  cCtx.scale(sc, sc);
+  cCtx.rotate(chutePhase >= 2 ? Math.sin(time * 0.0015) * 0.04 : 0);
+
+  // Legs
+  cCtx.strokeStyle = '#cc4422';
+  cCtx.lineWidth = 8;
+  cCtx.lineCap = 'round';
+  const legSpr = chutePhase < 2 ? 0.2 : 0.12;
+  cCtx.beginPath(); cCtx.moveTo(-8, 28); cCtx.lineTo(-14 - legSpr*35, 65); cCtx.stroke();
+  cCtx.beginPath(); cCtx.moveTo(8, 28);  cCtx.lineTo(14 + legSpr*35, 65);  cCtx.stroke();
+  // Boots
+  cCtx.fillStyle = '#222';
+  cCtx.beginPath(); cCtx.arc(-14 - legSpr*35, 67, 5, 0, Math.PI*2); cCtx.fill();
+  cCtx.beginPath(); cCtx.arc(14 + legSpr*35, 67, 5, 0, Math.PI*2); cCtx.fill();
+
+  // Torso
+  const tGrad = cCtx.createLinearGradient(-15, -22, 15, 32);
+  tGrad.addColorStop(0, '#ff5533');
+  tGrad.addColorStop(1, '#cc3311');
+  cCtx.fillStyle = tGrad;
+  cCtx.beginPath(); cCtx.ellipse(0, 6, 17, 26, 0, 0, Math.PI*2); cCtx.fill();
+
+  // Backpack
+  cCtx.fillStyle = '#333';
+  cCtx.fillRect(-11, -11, 22, 20);
+  cCtx.fillStyle = '#444';
+  cCtx.fillRect(-9, -9, 18, 16);
+
+  // Arms — phase-dependent
+  cCtx.strokeStyle = '#ff5533';
+  cCtx.lineWidth = 7;
+
+  if (chutePhase === 0) {
+    // Reaching for cord
+    const rp = Math.min(1, progress * 1.5);
+    const armAng = -0.5 + rp * 1.2;
+    cCtx.beginPath(); cCtx.moveTo(-17, -3); cCtx.lineTo(-42, -18); cCtx.stroke();
+    const raX = 17 + Math.cos(armAng) * 28 * (1 - rp * 0.3);
+    const raY = -3 + Math.sin(armAng) * 28;
+    cCtx.beginPath(); cCtx.moveTo(17, -3); cCtx.lineTo(raX, raY); cCtx.stroke();
+    cCtx.fillStyle = `rgba(255,200,100,${rp * 0.7})`;
+    cCtx.beginPath(); cCtx.arc(raX, raY, 4, 0, Math.PI*2); cCtx.fill();
+  }
+  else if (chutePhase === 1) {
+    // PULLING — dramatic yank
+    const pp = easeOutBack(progress);
+    const pullY = -5 + pp * 48;
+    cCtx.beginPath(); cCtx.moveTo(-17, -3); cCtx.lineTo(-32, 6 + pp * 12); cCtx.stroke();
+    cCtx.beginPath(); cCtx.moveTo(17, -3); cCtx.lineTo(11, pullY); cCtx.stroke();
+    // Cord
+    cCtx.strokeStyle = '#aaa'; cCtx.lineWidth = 2;
+    cCtx.beginPath(); cCtx.moveTo(5, -9); cCtx.quadraticCurveTo(8, pullY*0.5, 11, pullY); cCtx.stroke();
+    // Handle
+    cCtx.fillStyle = '#ff8800';
+    cCtx.beginPath(); cCtx.arc(11, pullY, 5, 0, Math.PI*2); cCtx.fill();
+    // Flash
+    if (progress > 0.7) {
+      cCtx.fillStyle = `rgba(255,255,255,${(progress-0.7)/0.3 * 0.35})`;
+      cCtx.fillRect(-cW, -cH, cW*3, cH*3);
+    }
+  }
+  else {
+    // Holding risers
+    const hw = 19 + (chutePhase >= 3 ? Math.sin(time * 0.002) * 3 : 0);
+    cCtx.beginPath(); cCtx.moveTo(-17, -3); cCtx.lineTo(-hw, -32); cCtx.stroke();
+    cCtx.beginPath(); cCtx.moveTo(17, -3);  cCtx.lineTo(hw, -32);  cCtx.stroke();
+    cCtx.fillStyle = '#222';
+    cCtx.beginPath(); cCtx.arc(-hw, -32, 3, 0, Math.PI*2); cCtx.fill();
+    cCtx.beginPath(); cCtx.arc(hw, -32, 3, 0, Math.PI*2); cCtx.fill();
+  }
+
+  // Head
+  cCtx.fillStyle = '#ffcc99';
+  cCtx.beginPath(); cCtx.arc(0, -26, 11, 0, Math.PI*2); cCtx.fill();
+  // Helmet
+  cCtx.fillStyle = '#222';
+  cCtx.beginPath(); cCtx.ellipse(0, -29, 12, 8.5, 0, Math.PI, 0); cCtx.fill();
+  // Goggles
+  cCtx.fillStyle = '#44ccff'; cCtx.globalAlpha = 0.85;
+  cCtx.beginPath(); cCtx.ellipse(0, -25, 10, 3.8, 0, 0, Math.PI*2); cCtx.fill();
+  cCtx.globalAlpha = 1;
+  cCtx.fillStyle = 'rgba(255,255,255,0.3)';
+  cCtx.beginPath(); cCtx.ellipse(-3, -26, 3.5, 1.5, -0.3, 0, Math.PI*2); cCtx.fill();
+
+  // ---- PARACHUTE CANOPY (phase 2+) ----
+  if (chutePhase >= 2) {
+    const dp = chutePhase === 2 ? easeOutElastic(Math.min(1, progress * 1.2)) : 1;
+    const cW2 = 130 * dp;
+    const cH2 = 80 * dp;
+    const cY2 = -38 - cH2 - 22 * dp;
+
+    // Risers
+    cCtx.strokeStyle = `rgba(255,255,255,${0.35 * dp})`;
+    cCtx.lineWidth = 1.5;
+    const hw = 19;
+    for (let i = -3; i <= 3; i++) {
+      cCtx.beginPath();
+      cCtx.moveTo(i < 0 ? -hw : hw, -32);
+      cCtx.quadraticCurveTo(i * cW2 * 0.12, cY2 + cH2 * 0.7, i * cW2 * 0.15, cY2 + cH2 * 0.15);
+      cCtx.stroke();
+    }
+
+    // Canopy body
+    const canGrad = cCtx.createRadialGradient(0, cY2 + cH2*0.3, 0, 0, cY2 + cH2*0.3, cW2);
+    canGrad.addColorStop(0, `rgba(255,85,51,${0.92 * dp})`);
+    canGrad.addColorStop(0.7, `rgba(204,51,17,${0.87 * dp})`);
+    canGrad.addColorStop(1, `rgba(153,34,10,${0.72 * dp})`);
+    cCtx.fillStyle = canGrad;
+    cCtx.beginPath();
+    cCtx.ellipse(0, cY2 + cH2 * 0.3, cW2, cH2 * 0.72, 0, Math.PI, 0);
+    cCtx.fill();
+
+    // Highlight
+    cCtx.fillStyle = `rgba(255,255,255,${0.12 * dp})`;
+    cCtx.beginPath();
+    cCtx.ellipse(-cW2*0.2, cY2 + cH2*0.15, cW2*0.3, cH2*0.22, -0.2, Math.PI, 0);
+    cCtx.fill();
+
+    // Stripes
+    cCtx.fillStyle = `rgba(255,255,255,${0.14 * dp})`;
+    for (let i = -2; i <= 2; i++) {
+      cCtx.beginPath();
+      cCtx.ellipse(i * cW2 * 0.22, cY2 + cH2*0.3, cW2*0.055, cH2*0.65, 0, Math.PI, 0);
+      cCtx.fill();
+    }
+
+    // Billow
+    if (chutePhase >= 3) {
+      const bil = Math.sin(time * 0.003) * 4 * dp;
+      cCtx.fillStyle = 'rgba(255,255,255,0.025)';
+      cCtx.beginPath();
+      cCtx.ellipse(bil, cY2 + cH2*0.3, cW2*1.03, cH2*0.74, 0, Math.PI, 0);
+      cCtx.fill();
+    }
+  }
+
+  cCtx.restore();
+
+  // ---- GROUND (phases 3-4) ----
+  if (chutePhase >= 3) {
+    const groundRise = chutePhase === 3 ? progress : 1;
+    const groundY = cH + 50 - groundRise * (cH * 0.28);
+    const landY = chutePhase === 4 ? groundY - progress * 25 : groundY;
+
+    const gGrad = cCtx.createLinearGradient(0, landY, 0, cH);
+    gGrad.addColorStop(0, '#3a6630');
+    gGrad.addColorStop(0.3, '#2d5525');
+    gGrad.addColorStop(1, '#1a3318');
+    cCtx.fillStyle = gGrad;
+    cCtx.fillRect(0, landY, cW, cH - landY + 10);
+
+    // Landing zone
+    const lzA = chutePhase === 3 ? progress * 0.35 : 0.35 + progress * 0.2;
+    cCtx.strokeStyle = `rgba(255,255,255,${lzA})`;
+    cCtx.lineWidth = 2;
+    cCtx.setLineDash([6, 4]);
+    cCtx.beginPath();
+    cCtx.ellipse(cW/2, landY + 28, 55, 14, 0, 0, Math.PI*2);
+    cCtx.stroke();
+    cCtx.setLineDash([]);
+
+    cCtx.strokeStyle = `rgba(255,100,50,${lzA})`;
+    cCtx.lineWidth = 2;
+    cCtx.beginPath();
+    cCtx.moveTo(cW/2 - 10, landY + 28 - 5);
+    cCtx.lineTo(cW/2 + 10, landY + 28 + 5);
+    cCtx.moveTo(cW/2 + 10, landY + 28 - 5);
+    cCtx.lineTo(cW/2 - 10, landY + 28 + 5);
+    cCtx.stroke();
+  }
+
+  // ---- PHASE TEXT ----
+  cCtx.textAlign = 'center';
+  if (chutePhase === 0 && progress > 0.3) {
+    const a = Math.min(1, (progress - 0.3) * 2.5);
+    cCtx.font = `${15}px 'JetBrains Mono', monospace`;
+    cCtx.fillStyle = `rgba(255,200,100,${a * 0.7})`;
+    cCtx.fillText('REACHING FOR CORD...', cW/2, cH * 0.17);
+  }
+  if (chutePhase === 1) {
+    const a = Math.min(1, progress * 3);
+    cCtx.font = `bold ${Math.floor(22 + progress * 18)}px 'Bebas Neue', sans-serif`;
+    cCtx.fillStyle = `rgba(255,150,50,${a})`;
+    cCtx.fillText('PULL!', cW/2, cH * 0.15);
+  }
+  if (chutePhase === 2 && progress < 0.65) {
+    const a = 1 - progress / 0.65;
+    cCtx.font = `bold ${Math.floor(38 + progress * 18)}px 'Bebas Neue', sans-serif`;
+    cCtx.fillStyle = `rgba(0,255,136,${a})`;
+    cCtx.shadowBlur = 25;
+    cCtx.shadowColor = `rgba(0,255,136,${a * 0.5})`;
+    cCtx.fillText('CHUTE DEPLOYED', cW/2, cH * 0.13);
+    cCtx.shadowBlur = 0;
+  }
+  if (chutePhase === 3 && progress > 0.7) {
+    const a = (progress - 0.7) / 0.3;
+    cCtx.font = '14px "JetBrains Mono", monospace';
+    cCtx.fillStyle = `rgba(255,255,255,${a * 0.4})`;
+    cCtx.fillText('APPROACHING LANDING ZONE', cW/2, cH * 0.09);
+  }
+  if (chutePhase === 4) {
+    const a = Math.min(1, progress * 2);
+    cCtx.font = `bold ${Math.floor(46 + progress * 14)}px 'Bebas Neue', sans-serif`;
+    cCtx.fillStyle = `rgba(0,255,136,${a})`;
+    cCtx.shadowBlur = 30;
+    cCtx.shadowColor = `rgba(0,255,136,${a * 0.5})`;
+    cCtx.fillText('TOUCHDOWN', cW/2, cH * 0.34);
+    cCtx.shadowBlur = 0;
+  }
+
+  // Altitude readout
+  if (chutePhase >= 2) {
+    const displayAlt = Math.max(0, Math.floor(DEPLOY_ALT * (1 - (chutePhase===2 ? progress*0.2 : chutePhase===3 ? 0.2+progress*0.7 : 0.9+progress*0.1))));
+    cCtx.font = '15px "JetBrains Mono", monospace';
+    cCtx.fillStyle = 'rgba(255,255,255,0.22)';
+    cCtx.textAlign = 'right';
+    cCtx.fillText(`ALT ${displayAlt} FT`, cW - 24, cH - 24);
+  }
+
+  // Auto-advance
+  if (t >= dur) advancePhase();
+}
+
+// Start on menu
+document.getElementById('start-screen').classList.add('show');
+</script>
+</body>
+</html>
