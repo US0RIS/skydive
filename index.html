@@ -212,6 +212,156 @@
   }
   #chute-cinema.show { opacity:1; }
   #chute-canvas { width:100%; height:100%; }
+
+  /* ---- Coin HUD ---- */
+  #coin-hud {
+    position:absolute; top:16px; left:50%; transform:translateX(-50%);
+    font-family:'Bebas Neue',sans-serif; font-size:22px; color:#ffd700;
+    text-shadow:0 0 8px rgba(255,215,0,0.4);
+    z-index:25; pointer-events:none; opacity:0; transition:opacity 0.4s;
+    letter-spacing:2px;
+  }
+  #coin-hud.show { opacity:1; }
+  .coin-icon { display:inline-block; width:16px; height:16px; background:#ffd700; border-radius:50%; margin-right:4px; vertical-align:middle; border:1px solid #b8960f; position:relative; top:-1px; }
+
+  /* Coin earn popup */
+  #coin-earn {
+    position:absolute; top:55%; left:50%; transform:translate(-50%,-50%);
+    font-family:'Bebas Neue',sans-serif; font-size:24px; color:#ffd700;
+    text-shadow:0 0 12px rgba(255,215,0,0.5); opacity:0; pointer-events:none;
+    transition:opacity 0.2s; z-index:20; letter-spacing:3px;
+  }
+
+  /* Wager display during game */
+  #wager-hud {
+    position:absolute; top:52px; left:50%; transform:translateX(-50%);
+    font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:2px;
+    color:rgba(255,180,0,0.5); z-index:25; pointer-events:none;
+    opacity:0; transition:opacity 0.4s;
+  }
+  #wager-hud.show { opacity:1; }
+
+  /* ---- Menu coin balance ---- */
+  .menu-coins {
+    font-family:'Bebas Neue',sans-serif; font-size:28px; color:#ffd700;
+    text-shadow:0 0 10px rgba(255,215,0,0.3); letter-spacing:3px;
+    margin-bottom:18px;
+  }
+
+  /* ---- Shop & Gamble buttons on start screen ---- */
+  .menu-btns {
+    display:flex; gap:12px; margin-top:16px; pointer-events:all;
+  }
+  .menu-btn {
+    font-family:'Oswald',sans-serif; font-weight:300; font-size:13px;
+    letter-spacing:4px; text-transform:uppercase; padding:10px 20px;
+    border:1px solid rgba(255,255,255,0.12); border-radius:4px;
+    background:none; color:rgba(255,255,255,0.45); cursor:pointer;
+    transition:all 0.3s;
+  }
+  .menu-btn:hover { background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.25); color:#fff; }
+  .menu-btn.gold { border-color:rgba(255,215,0,0.25); color:rgba(255,215,0,0.6); }
+  .menu-btn.gold:hover { border-color:rgba(255,215,0,0.5); color:#ffd700; background:rgba(255,215,0,0.08); }
+
+  /* ---- Shop Overlay ---- */
+  #shop-screen {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    z-index:200; background:rgba(0,0,0,0.92); backdrop-filter:blur(10px);
+    display:none; flex-direction:column; align-items:center;
+    overflow-y:auto; padding:30px 16px;
+  }
+  #shop-screen.show { display:flex; }
+  .shop-title {
+    font-family:'Bebas Neue',sans-serif; font-size:clamp(32px,6vw,52px);
+    color:#fff; letter-spacing:8px; margin-bottom:6px;
+  }
+  .shop-coins {
+    font-family:'Bebas Neue',sans-serif; font-size:22px; color:#ffd700;
+    letter-spacing:3px; margin-bottom:20px;
+  }
+  .shop-section {
+    width:100%; max-width:500px; margin-bottom:20px;
+  }
+  .shop-section-title {
+    font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:4px;
+    text-transform:uppercase; color:rgba(255,255,255,0.3); margin-bottom:10px;
+    border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:6px;
+  }
+  .shop-item {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 14px; margin-bottom:6px;
+    background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06);
+    border-radius:6px; transition:all 0.2s;
+  }
+  .shop-item:hover { background:rgba(255,255,255,0.06); }
+  .shop-item.owned { border-color:rgba(0,255,136,0.2); }
+  .shop-item.equipped { border-color:rgba(0,255,136,0.4); background:rgba(0,255,136,0.05); }
+  .item-info { flex:1; }
+  .item-name {
+    font-family:'Oswald',sans-serif; font-size:15px; color:#fff; letter-spacing:1px;
+  }
+  .item-desc {
+    font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(255,255,255,0.3);
+    letter-spacing:1px; margin-top:2px;
+  }
+  .item-btn {
+    font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:2px;
+    padding:6px 14px; border-radius:4px; border:1px solid rgba(255,215,0,0.3);
+    background:none; color:#ffd700; cursor:pointer; transition:all 0.2s;
+    text-transform:uppercase; white-space:nowrap; margin-left:12px;
+  }
+  .item-btn:hover { background:rgba(255,215,0,0.1); border-color:#ffd700; }
+  .item-btn.equipped-btn { border-color:rgba(0,255,136,0.3); color:#00ff88; cursor:default; }
+  .item-btn:disabled { opacity:0.3; cursor:not-allowed; }
+  .shop-close {
+    margin-top:20px; margin-bottom:20px;
+  }
+
+  /* ---- Gamble Overlay ---- */
+  #gamble-screen {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    z-index:200; background:rgba(0,0,0,0.92); backdrop-filter:blur(10px);
+    display:none; flex-direction:column; align-items:center; justify-content:center;
+    padding:30px 16px;
+  }
+  #gamble-screen.show { display:flex; }
+  .gamble-title {
+    font-family:'Bebas Neue',sans-serif; font-size:clamp(28px,5vw,44px);
+    color:#ff8800; letter-spacing:6px; margin-bottom:6px;
+  }
+  .gamble-subtitle {
+    font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:3px;
+    color:rgba(255,255,255,0.3); margin-bottom:20px; text-align:center;
+    text-transform:uppercase;
+  }
+  .gamble-balance {
+    font-family:'Bebas Neue',sans-serif; font-size:26px; color:#ffd700;
+    letter-spacing:3px; margin-bottom:16px;
+  }
+  .gamble-input-row {
+    display:flex; align-items:center; gap:10px; margin-bottom:18px;
+  }
+  .gamble-input {
+    font-family:'Bebas Neue',sans-serif; font-size:28px; color:#ffd700;
+    background:rgba(255,255,255,0.04); border:1px solid rgba(255,215,0,0.2);
+    border-radius:6px; padding:8px 16px; width:120px; text-align:center;
+    outline:none;
+  }
+  .gamble-input:focus { border-color:rgba(255,215,0,0.5); }
+  .gamble-quick {
+    font-family:'Oswald',sans-serif; font-size:11px; padding:6px 10px;
+    border:1px solid rgba(255,255,255,0.1); border-radius:4px;
+    background:none; color:rgba(255,255,255,0.4); cursor:pointer;
+    transition:all 0.2s; letter-spacing:1px;
+  }
+  .gamble-quick:hover { background:rgba(255,255,255,0.06); color:#fff; }
+  .gamble-confirm {
+    font-family:'Oswald',sans-serif; font-size:15px; letter-spacing:4px;
+    padding:12px 28px; border:1px solid rgba(255,180,0,0.3); border-radius:4px;
+    background:none; color:#ff8800; cursor:pointer; transition:all 0.2s;
+    text-transform:uppercase; margin-bottom:12px;
+  }
+  .gamble-confirm:hover { background:rgba(255,136,0,0.1); border-color:#ff8800; }
 </style>
 </head>
 <body>
@@ -245,12 +395,20 @@
   <div id="nearmiss"></div>
   <div id="speedbrake"></div>
   <div id="zone-banner"></div>
+  <div id="coin-hud"><span class="coin-icon"></span> <span id="coin-count">0</span></div>
+  <div id="coin-earn"></div>
+  <div id="wager-hud"></div>
 
   <!-- Screens -->
   <div id="start-screen" class="screen show">
     <div class="title">TERMINAL<br>VELOCITY</div>
     <div class="subtitle">A Descent Into Chaos</div>
+    <div class="menu-coins"><span class="coin-icon"></span> <span id="menu-coin-count">0</span></div>
     <button class="play-btn" id="btn-start">PRESS TO JUMP</button>
+    <div class="menu-btns">
+      <button class="menu-btn" id="btn-shop">SHOP</button>
+      <button class="menu-btn gold" id="btn-gamble">WAGER</button>
+    </div>
     <div class="controls-info" id="controls-info">
       ← → ↑ ↓ ARROW KEYS / WASD TO STEER<br>
       DODGE EVERYTHING — SURVIVE THE FALL
@@ -260,14 +418,50 @@
   <div id="win-screen" class="screen">
     <div class="end-title" style="color:#00ff88">SAFE LANDING</div>
     <div class="end-stats" id="win-stats"></div>
+    <div id="win-coins" style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:#ffd700;letter-spacing:3px;margin-top:10px;text-shadow:0 0 10px rgba(255,215,0,0.3)"></div>
     <button class="retry-btn" id="btn-win">JUMP AGAIN</button>
+    <div class="menu-btns">
+      <button class="menu-btn" onclick="renderShop();document.getElementById('shop-screen').classList.add('show')">SHOP</button>
+      <button class="menu-btn gold" onclick="updateAllCoinDisplays();document.getElementById('gamble-amount').value='';document.getElementById('gamble-screen').classList.add('show')">WAGER</button>
+    </div>
   </div>
 
   <div id="death-screen" class="screen">
     <div class="end-title" style="color:#ff4444">WIPEOUT</div>
     <div class="end-stats" id="death-stats"></div>
+    <div id="death-coins" style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:rgba(255,215,0,0.6);letter-spacing:3px;margin-top:10px"></div>
     <button class="retry-btn" id="btn-death">TRY AGAIN</button>
+    <div class="menu-btns">
+      <button class="menu-btn" onclick="renderShop();document.getElementById('shop-screen').classList.add('show')">SHOP</button>
+      <button class="menu-btn gold" onclick="updateAllCoinDisplays();document.getElementById('gamble-amount').value='';document.getElementById('gamble-screen').classList.add('show')">WAGER</button>
+    </div>
   </div>
+</div>
+
+<!-- Shop Screen -->
+<div id="shop-screen">
+  <div class="shop-title">SHOP</div>
+  <div class="shop-coins"><span class="coin-icon"></span> <span id="shop-coin-count">0</span></div>
+  <div id="shop-items"></div>
+  <button class="menu-btn shop-close" id="btn-shop-close">BACK</button>
+</div>
+
+<!-- Gamble Screen -->
+<div id="gamble-screen">
+  <div class="gamble-title">HIGH STAKES</div>
+  <div class="gamble-subtitle">Wager coins — survive the fall to double them.<br>Die and lose it all.</div>
+  <div class="gamble-balance"><span class="coin-icon"></span> <span id="gamble-coin-count">0</span></div>
+  <div class="gamble-input-row">
+    <input type="number" class="gamble-input" id="gamble-amount" min="0" value="0" placeholder="0">
+  </div>
+  <div class="gamble-input-row">
+    <button class="gamble-quick" data-pct="10">10%</button>
+    <button class="gamble-quick" data-pct="25">25%</button>
+    <button class="gamble-quick" data-pct="50">50%</button>
+    <button class="gamble-quick" data-pct="100">ALL IN</button>
+  </div>
+  <button class="gamble-confirm" id="btn-gamble-confirm">LOCK IN WAGER</button>
+  <button class="menu-btn" id="btn-gamble-close">BACK</button>
 </div>
 
 <!-- Mobile D-Pad -->
@@ -318,6 +512,229 @@ let dieTimer, chuteTimer, fallDist;
 let invulnFrames = 0;
 let lastZoneName = '';
 let shakeAmt = 0;
+
+// ═══════════════════════════════════════════
+// COINS / SHOP / GAMBLING SYSTEM
+// ═══════════════════════════════════════════
+let totalCoins = 0;        // persistent balance
+let runCoins = 0;          // coins earned this run
+let lastCoinAlt = 0;       // tracks altitude for coin ticks
+let currentWager = 0;      // active wager amount
+let coinEarnTimer = 0;
+
+// Active bonuses (single-use, consumed on run start)
+let activeBonus = { shield:false, magnet:false, headstart:false };
+
+// ---- Save / Load (using window.storage if available, else in-memory) ----
+let saveData = { coins:0, owned:[], equipped:'default', upgrades:{} };
+
+async function loadSave() {
+  try {
+    const r = await window.storage.get('tv-save');
+    if (r && r.value) saveData = JSON.parse(r.value);
+  } catch(e) { /* first load or no storage */ }
+  totalCoins = saveData.coins || 0;
+  updateAllCoinDisplays();
+}
+async function persistSave() {
+  saveData.coins = totalCoins;
+  try { await window.storage.set('tv-save', JSON.stringify(saveData)); } catch(e) {}
+}
+
+function updateAllCoinDisplays() {
+  document.getElementById('coin-count').textContent = totalCoins.toLocaleString();
+  document.getElementById('menu-coin-count').textContent = totalCoins.toLocaleString();
+  const sc = document.getElementById('shop-coin-count');
+  if (sc) sc.textContent = totalCoins.toLocaleString();
+  const gc = document.getElementById('gamble-coin-count');
+  if (gc) gc.textContent = totalCoins.toLocaleString();
+}
+
+// ---- Shop Items ----
+const SHOP_ITEMS = {
+  skins: [
+    { id:'default', name:'Standard Issue', desc:'Classic red jumpsuit', cost:0 , colors:{ body:0xff5533, emissive:0x331100, helmet:0x222222, goggle:0x44ccff }},
+    { id:'arctic', name:'Arctic Ghost', desc:'White stealth suit', cost:150, colors:{ body:0xddeeff, emissive:0x223344, helmet:0x445566, goggle:0x88ddff }},
+    { id:'neon', name:'Neon Blaze', desc:'High-vis cyberpunk', cost:300, colors:{ body:0x00ff88, emissive:0x003322, helmet:0x111111, goggle:0xff00ff }},
+    { id:'gold', name:'Golden Eagle', desc:'For the wealthy diver', cost:750, colors:{ body:0xffd700, emissive:0x443300, helmet:0x332200, goggle:0xff4400 }},
+    { id:'void', name:'Void Walker', desc:'Dark matter suit', cost:1200, colors:{ body:0x220033, emissive:0x110022, helmet:0x000000, goggle:0xaa00ff }},
+    { id:'inferno', name:'Inferno', desc:'Born from the sun', cost:2000, colors:{ body:0xff2200, emissive:0x661100, helmet:0x440000, goggle:0xffaa00 }},
+  ],
+  upgrades: [
+    { id:'hitbox1', name:'Slim Fit I', desc:'5% smaller hitbox', cost:200, max:1, effect:'hitbox', val:0.05 },
+    { id:'hitbox2', name:'Slim Fit II', desc:'10% smaller hitbox', cost:500, max:1, requires:'hitbox1', effect:'hitbox', val:0.10 },
+    { id:'accel1', name:'Quick Reflexes I', desc:'+15% move speed', cost:150, max:1, effect:'accel', val:0.15 },
+    { id:'accel2', name:'Quick Reflexes II', desc:'+30% move speed', cost:400, max:1, requires:'accel1', effect:'accel', val:0.30 },
+    { id:'coinmult', name:'Coin Magnet', desc:'Earn 50% more coins', cost:350, max:1, effect:'coinmult', val:1.5 },
+    { id:'ringboost', name:'Ring Master', desc:'Rings slow you 25 MPH', cost:500, max:1, effect:'ringboost', val:25 },
+  ],
+  bonuses: [
+    { id:'shield', name:'Shield', desc:'Survive one hit this run', cost:100, effect:'shield' },
+    { id:'headstart', name:'Head Start', desc:'Start at 5000 FT instead', cost:75, effect:'headstart' },
+  ]
+};
+
+function getUpgradeVal(effect, fallback) {
+  for (const u of SHOP_ITEMS.upgrades) {
+    if (u.effect === effect && (saveData.upgrades[u.id] || 0) > 0) return u.val;
+  }
+  return fallback;
+}
+
+function applySkin(skinId) {
+  const skin = SHOP_ITEMS.skins.find(s => s.id === skinId);
+  if (!skin) return;
+  bodyMat.color.setHex(skin.colors.body);
+  bodyMat.emissive.setHex(skin.colors.emissive);
+  helmetMat.color.setHex(skin.colors.helmet);
+  gogMat.color.setHex(skin.colors.goggle);
+}
+
+// ---- Render Shop ----
+function renderShop() {
+  const container = document.getElementById('shop-items');
+  updateAllCoinDisplays();
+  let html = '';
+
+  // Skins
+  html += '<div class="shop-section"><div class="shop-section-title">Suits</div>';
+  for (const s of SHOP_ITEMS.skins) {
+    const owned = s.cost === 0 || (saveData.owned || []).includes(s.id);
+    const equipped = saveData.equipped === s.id;
+    const cls = equipped ? 'shop-item equipped' : owned ? 'shop-item owned' : 'shop-item';
+    let btn = '';
+    if (equipped) btn = '<button class="item-btn equipped-btn">EQUIPPED</button>';
+    else if (owned) btn = `<button class="item-btn" onclick="equipSkin('${s.id}')">EQUIP</button>`;
+    else btn = `<button class="item-btn" ${totalCoins < s.cost ? 'disabled' : ''} onclick="buySkin('${s.id}')"><span class="coin-icon" style="width:10px;height:10px;margin-right:3px"></span>${s.cost}</button>`;
+    html += `<div class="${cls}"><div class="item-info"><div class="item-name" style="color:#${s.colors.body.toString(16).padStart(6,'0')}">${s.name}</div><div class="item-desc">${s.desc}</div></div>${btn}</div>`;
+  }
+  html += '</div>';
+
+  // Upgrades
+  html += '<div class="shop-section"><div class="shop-section-title">Upgrades</div>';
+  for (const u of SHOP_ITEMS.upgrades) {
+    const owned = (saveData.upgrades[u.id] || 0) >= (u.max || 1);
+    const locked = u.requires && !(saveData.upgrades[u.requires] || 0);
+    let btn = '';
+    if (owned) btn = '<button class="item-btn equipped-btn">OWNED</button>';
+    else if (locked) btn = `<button class="item-btn" disabled>LOCKED</button>`;
+    else btn = `<button class="item-btn" ${totalCoins < u.cost ? 'disabled' : ''} onclick="buyUpgrade('${u.id}')"><span class="coin-icon" style="width:10px;height:10px;margin-right:3px"></span>${u.cost}</button>`;
+    html += `<div class="shop-item ${owned?'owned':''}"><div class="item-info"><div class="item-name">${u.name}</div><div class="item-desc">${u.desc}</div></div>${btn}</div>`;
+  }
+  html += '</div>';
+
+  // Single-use bonuses
+  html += '<div class="shop-section"><div class="shop-section-title">Single-Use Bonuses</div>';
+  for (const b of SHOP_ITEMS.bonuses) {
+    const active = activeBonus[b.effect];
+    let btn = '';
+    if (active) btn = '<button class="item-btn equipped-btn">READY</button>';
+    else btn = `<button class="item-btn" ${totalCoins < b.cost ? 'disabled' : ''} onclick="buyBonus('${b.effect}',${b.cost})"><span class="coin-icon" style="width:10px;height:10px;margin-right:3px"></span>${b.cost}</button>`;
+    html += `<div class="shop-item ${active?'equipped':''}"><div class="item-info"><div class="item-name">${b.name}</div><div class="item-desc">${b.desc}${active?' — ARMED':''}</div></div>${btn}</div>`;
+  }
+  html += '</div>';
+
+  container.innerHTML = html;
+}
+
+function buySkin(id) {
+  const s = SHOP_ITEMS.skins.find(x => x.id === id);
+  if (!s || totalCoins < s.cost) return;
+  totalCoins -= s.cost;
+  if (!saveData.owned) saveData.owned = [];
+  saveData.owned.push(id);
+  saveData.equipped = id;
+  applySkin(id);
+  persistSave();
+  renderShop();
+}
+
+function equipSkin(id) {
+  saveData.equipped = id;
+  applySkin(id);
+  persistSave();
+  renderShop();
+}
+
+function buyUpgrade(id) {
+  const u = SHOP_ITEMS.upgrades.find(x => x.id === id);
+  if (!u || totalCoins < u.cost) return;
+  totalCoins -= u.cost;
+  if (!saveData.upgrades) saveData.upgrades = {};
+  saveData.upgrades[id] = (saveData.upgrades[id] || 0) + 1;
+  persistSave();
+  renderShop();
+}
+
+function buyBonus(effect, cost) {
+  if (totalCoins < cost) return;
+  totalCoins -= cost;
+  activeBonus[effect] = true;
+  persistSave();
+  renderShop();
+}
+
+// ---- Shop / Gamble UI Events ----
+document.getElementById('btn-shop').addEventListener('click', () => {
+  renderShop();
+  document.getElementById('shop-screen').classList.add('show');
+});
+document.getElementById('btn-shop-close').addEventListener('click', () => {
+  document.getElementById('shop-screen').classList.remove('show');
+});
+document.getElementById('btn-gamble').addEventListener('click', () => {
+  updateAllCoinDisplays();
+  document.getElementById('gamble-amount').value = '';
+  document.getElementById('gamble-amount').max = totalCoins;
+  document.getElementById('gamble-screen').classList.add('show');
+});
+document.getElementById('btn-gamble-close').addEventListener('click', () => {
+  document.getElementById('gamble-screen').classList.remove('show');
+});
+
+// Quick wager buttons
+document.querySelectorAll('.gamble-quick').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const pct = parseInt(btn.dataset.pct);
+    const val = Math.floor(totalCoins * pct / 100);
+    document.getElementById('gamble-amount').value = val;
+  });
+});
+
+document.getElementById('btn-gamble-confirm').addEventListener('click', () => {
+  const input = document.getElementById('gamble-amount');
+  let amt = parseInt(input.value) || 0;
+  amt = Math.max(0, Math.min(amt, totalCoins));
+  if (amt <= 0) { document.getElementById('gamble-screen').classList.remove('show'); return; }
+  currentWager = amt;
+  totalCoins -= amt;
+  persistSave();
+  document.getElementById('gamble-screen').classList.remove('show');
+  startGame();
+});
+
+// ---- Coin Earning During Gameplay ----
+function tickCoins() {
+  const altDrop = lastCoinAlt - altitude;
+  if (altDrop >= 10) {
+    const ticks = Math.floor(altDrop / 10);
+    const mult = getUpgradeVal('coinmult', 1);
+    const earned = Math.floor(ticks * mult);
+    runCoins += earned;
+    lastCoinAlt -= ticks * 10;
+    document.getElementById('coin-count').textContent = (totalCoins + runCoins).toLocaleString();
+  }
+}
+
+function showCoinEarn(amount, label) {
+  const el = document.getElementById('coin-earn');
+  el.textContent = `+${amount} COINS${label ? ' — '+label : ''}`;
+  el.style.opacity = '1';
+  coinEarnTimer = 80;
+}
+
+// ---- Initialize ----
+loadSave();
 
 // ---- Three.js Setup ----
 const scene    = new THREE.Scene();
@@ -934,7 +1351,7 @@ document.addEventListener('keydown', e => {
   if (e.key==='ArrowRight'||e.key==='d'||e.key==='D') input.right=true;
   if (e.key==='ArrowUp'||e.key==='w'||e.key==='W') input.up=true;
   if (e.key==='ArrowDown'||e.key==='s'||e.key==='S') input.down=true;
-  if ((e.key===' '||e.key==='Enter') && state===S.MENU) startGame();
+  if ((e.key===' '||e.key==='Enter') && state===S.MENU && !document.getElementById('shop-screen').classList.contains('show') && !document.getElementById('gamble-screen').classList.contains('show')) { currentWager = 0; startGame(); }
 });
 document.addEventListener('keyup', e => {
   if (e.key==='ArrowLeft'||e.key==='a'||e.key==='A') input.left=false;
@@ -1060,9 +1477,9 @@ if (isMobile) {
 }
 
 // ---- Buttons ----
-document.getElementById('btn-start').addEventListener('click', startGame);
-document.getElementById('btn-win').addEventListener('click', startGame);
-document.getElementById('btn-death').addEventListener('click', startGame);
+document.getElementById('btn-start').addEventListener('click', () => { currentWager = 0; startGame(); });
+document.getElementById('btn-win').addEventListener('click', () => { currentWager = 0; startGame(); });
+document.getElementById('btn-death').addEventListener('click', () => { currentWager = 0; startGame(); });
 
 // ---- HUD helpers ----
 const hAlt = document.getElementById('h-alt');
@@ -1120,7 +1537,8 @@ function showNearMiss() {
   nmHideTimer = 40;
 }
 function showSpeedBrake() {
-  speedbrakeEl.textContent = 'SPEED BRAKE  −15 MPH';
+  const ringSlowMph = getUpgradeVal('ringboost', 15);
+  speedbrakeEl.textContent = `SPEED BRAKE  −${ringSlowMph} MPH`;
   speedbrakeEl.style.opacity = '1';
   sbHideTimer = 70;
 }
@@ -1195,7 +1613,8 @@ function checkCollision() {
   const px = playerGroup.position.x;
   const py = playerGroup.position.y;
   const pz = playerGroup.position.z;
-  const r = PLAYER_HITBOX;
+  const hitboxReduction = getUpgradeVal('hitbox', 0);
+  const r = PLAYER_HITBOX * (1 - hitboxReduction);
 
   // Y tolerance: scale with speed so fast movement doesn't skip frames
   const yTol = 3 + speed * 0.8;
@@ -1220,7 +1639,8 @@ function checkCollision() {
           if (dist < obs.innerR - r) {
             obs._ringTriggered = true;
             // Speed brake reward!
-            speed = Math.max(0.3, speed - 15 / 30); // reduce by 15 mph
+            const ringSlowMph = getUpgradeVal('ringboost', 15);
+            speed = Math.max(0.3, speed - ringSlowMph / 30);
             ringsHit++;
             showSpeedBrake();
           }
@@ -1289,7 +1709,7 @@ function checkNearMiss() {
 // ---- Start / Reset ----
 function startGame() {
   state = S.PLAY;
-  altitude = START_ALT;
+  altitude = activeBonus.headstart ? 5000 : START_ALT;
   speed = 0; maxSpd = 0;
   playerVX = 0; playerVZ = 0;
   tiltX = 0; tiltZ = 0;
@@ -1298,10 +1718,17 @@ function startGame() {
   combo = 0; maxCombo = 0; comboTime = 0;
   dieTimer = 0; chuteTimer = 0;
   fallDist = 0;
-  nextObsY = -80; // further initial gap to give player breathing room
+  nextObsY = -80;
   lastZoneName = '';
   shakeAmt = 0;
-  invulnFrames = 90; // ~1.5 seconds grace period
+  invulnFrames = 90;
+
+  // Coin system reset
+  runCoins = 0;
+  lastCoinAlt = altitude;
+
+  // Apply skin
+  applySkin(saveData.equipped || 'default');
 
   clearObstacles();
   playerGroup.position.set(0, 0, 0);
@@ -1319,8 +1746,20 @@ function startGame() {
   document.getElementById('start-screen').classList.remove('show');
   document.getElementById('win-screen').classList.remove('show');
   document.getElementById('death-screen').classList.remove('show');
+  document.getElementById('shop-screen').classList.remove('show');
+  document.getElementById('gamble-screen').classList.remove('show');
   document.getElementById('hud').classList.add('show');
   document.getElementById('alt-track').classList.add('show');
+  document.getElementById('coin-hud').classList.add('show');
+
+  // Wager display
+  const wagerHud = document.getElementById('wager-hud');
+  if (currentWager > 0) {
+    wagerHud.textContent = 'WAGER: ' + currentWager.toLocaleString();
+    wagerHud.classList.add('show');
+  } else {
+    wagerHud.classList.remove('show');
+  }
 }
 
 // ---- End Screens ----
@@ -1328,6 +1767,20 @@ function showWin() {
   state = S.WIN;
   document.getElementById('chute-cinema').classList.remove('show');
   const t = (gameTime / 60).toFixed(1);
+
+  // Settle coins
+  totalCoins += runCoins;
+  let wagerResult = '';
+  if (currentWager > 0) {
+    const winnings = currentWager * 2;
+    totalCoins += winnings;
+    wagerResult = `WAGER WON: +${winnings.toLocaleString()}`;
+  }
+  currentWager = 0;
+  activeBonus = { shield:false, magnet:false, headstart:false };
+  persistSave();
+  updateAllCoinDisplays();
+
   document.getElementById('win-stats').innerHTML = `
     OBSTACLES CLEARED: <span>${obsPassed}</span><br>
     RINGS THREADED: <span>${ringsHit}</span><br>
@@ -1336,12 +1789,31 @@ function showWin() {
     BEST COMBO: <span>${maxCombo}x</span><br>
     FLIGHT TIME: <span>${t}s</span>
   `;
+  document.getElementById('win-coins').innerHTML =
+    `+${runCoins.toLocaleString()} COINS` +
+    (wagerResult ? `<br><span style="color:#ff8800">${wagerResult}</span>` : '');
   document.getElementById('win-screen').classList.add('show');
   document.getElementById('hud').classList.remove('show');
   document.getElementById('alt-track').classList.remove('show');
+  document.getElementById('coin-hud').classList.remove('show');
+  document.getElementById('wager-hud').classList.remove('show');
 }
 
 function showDeath() {
+  // Shield bonus — survive one hit
+  if (activeBonus.shield) {
+    activeBonus.shield = false;
+    invulnFrames = 60; // brief invuln after shield use
+    shakeAmt = 0.6;
+    // Flash a message
+    const el = document.getElementById('speedbrake');
+    el.textContent = 'SHIELD ABSORBED HIT';
+    el.style.color = '#44ccff';
+    el.style.opacity = '1';
+    sbHideTimer = 80;
+    setTimeout(() => { el.style.color = ''; }, 1500);
+    return; // don't die
+  }
   state = S.DYING;
   dieTimer = 0;
   shakeAmt = 1.5;
@@ -1352,6 +1824,18 @@ function showDeath() {
 function showDeathScreen() {
   state = S.WIN; // prevent further updates
   const altLost = START_ALT - Math.floor(altitude);
+
+  // Settle coins — keep what you earned, lose wager
+  totalCoins += runCoins;
+  let wagerResult = '';
+  if (currentWager > 0) {
+    wagerResult = `WAGER LOST: -${currentWager.toLocaleString()}`;
+  }
+  currentWager = 0;
+  activeBonus = { shield:false, magnet:false, headstart:false };
+  persistSave();
+  updateAllCoinDisplays();
+
   document.getElementById('death-stats').innerHTML = `
     ALTITUDE LOST: <span>${altLost.toLocaleString()} FT</span><br>
     OBSTACLES CLEARED: <span>${obsPassed}</span><br>
@@ -1360,9 +1844,14 @@ function showDeathScreen() {
     NEAR MISSES: <span>${nearMisses}</span><br>
     BEST COMBO: <span>${maxCombo}x</span>
   `;
+  document.getElementById('death-coins').innerHTML =
+    `+${runCoins.toLocaleString()} COINS` +
+    (wagerResult ? `<br><span style="color:#ff4444">${wagerResult}</span>` : '');
   document.getElementById('death-screen').classList.add('show');
   document.getElementById('hud').classList.remove('show');
   document.getElementById('alt-track').classList.remove('show');
+  document.getElementById('coin-hud').classList.remove('show');
+  document.getElementById('wager-hud').classList.remove('show');
 }
 
 // ---- Main Loop ----
@@ -1404,6 +1893,9 @@ function loop(time) {
     // Altitude
     altitude -= speed * 1.8 * dt;
 
+    // Earn coins
+    tickCoins();
+
     // Check deploy
     if (altitude <= DEPLOY_ALT) {
       state = S.CHUTE;
@@ -1412,9 +1904,9 @@ function loop(time) {
       chutePhaseTime = 0;
       playerGroup.visible = false;
       trailPoints.visible = false;
-      // Hide HUD, show cinema
       document.getElementById('hud').classList.remove('show');
       document.getElementById('alt-track').classList.remove('show');
+      document.getElementById('coin-hud').classList.remove('show');
       document.getElementById('chute-cinema').classList.add('show');
       initChuteCanvas();
       return;
@@ -1433,7 +1925,8 @@ function loop(time) {
       moveZ += touchDZ;
     }
 
-    const accel = 0.06 * dt;
+    const accelBoost = 1 + getUpgradeVal('accel', 0);
+    const accel = 0.06 * accelBoost * dt;
     const friction = 0.90;
     playerVX += moveX * accel;
     playerVZ += moveZ * accel;
@@ -1544,6 +2037,7 @@ function loop(time) {
     if (comboHideTimer > 0) { comboHideTimer -= dt; if(comboHideTimer<=0) comboEl.style.opacity='0'; }
     if (nmHideTimer > 0) { nmHideTimer -= dt; if(nmHideTimer<=0) nearmissEl.style.opacity='0'; }
     if (sbHideTimer > 0) { sbHideTimer -= dt; if(sbHideTimer<=0) speedbrakeEl.style.opacity='0'; }
+    if (coinEarnTimer > 0) { coinEarnTimer -= dt; if(coinEarnTimer<=0) document.getElementById('coin-earn').style.opacity='0'; }
 
     // Collision (skip during grace period)
     if (invulnFrames > 0) {
