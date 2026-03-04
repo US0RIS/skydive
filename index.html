@@ -553,26 +553,74 @@ function updateAllCoinDisplays() {
 // ---- Shop Items ----
 const SHOP_ITEMS = {
   skins: [
-    { id:'default', name:'Standard Issue', desc:'Classic red jumpsuit', cost:0 , colors:{ body:0xff5533, emissive:0x331100, helmet:0x222222, goggle:0x44ccff }},
-    { id:'arctic', name:'Arctic Ghost', desc:'White stealth suit', cost:150, colors:{ body:0xddeeff, emissive:0x223344, helmet:0x445566, goggle:0x88ddff }},
-    { id:'neon', name:'Neon Blaze', desc:'High-vis cyberpunk', cost:300, colors:{ body:0x00ff88, emissive:0x003322, helmet:0x111111, goggle:0xff00ff }},
-    { id:'gold', name:'Golden Eagle', desc:'For the wealthy diver', cost:750, colors:{ body:0xffd700, emissive:0x443300, helmet:0x332200, goggle:0xff4400 }},
-    { id:'void', name:'Void Walker', desc:'Dark matter suit', cost:1200, colors:{ body:0x220033, emissive:0x110022, helmet:0x000000, goggle:0xaa00ff }},
-    { id:'inferno', name:'Inferno', desc:'Born from the sun', cost:2000, colors:{ body:0xff2200, emissive:0x661100, helmet:0x440000, goggle:0xffaa00 }},
+    { id:'default', name:'Standard Issue', desc:'Classic red jumpsuit', cost:0,
+      colors:{ body:0xff5533, emissive:0x331100, helmet:0x222222, goggle:0x44ccff },
+      trail:{ r:1.0, g:0.55, b:0.25 }, extras:[] },
+    { id:'arctic', name:'Arctic Ghost', desc:'Frosted armor + ice crystal trail', cost:500,
+      colors:{ body:0xddeeff, emissive:0x223344, helmet:0x88aacc, goggle:0x88ddff },
+      trail:{ r:0.7, g:0.9, b:1.0 }, extras:['frost'] },
+    { id:'neon', name:'Neon Blaze', desc:'Glow-wire suit + plasma trail', cost:1200,
+      colors:{ body:0x00ff88, emissive:0x004422, helmet:0x111111, goggle:0xff00ff },
+      trail:{ r:0.0, g:1.0, b:0.5 }, extras:['glow','wireframe'] },
+    { id:'gold', name:'Golden Eagle', desc:'Gilded suit + sparkle trail + wing fins', cost:3000,
+      colors:{ body:0xffd700, emissive:0x443300, helmet:0x665500, goggle:0xff4400 },
+      trail:{ r:1.0, g:0.85, b:0.0 }, extras:['sparkle','wings'] },
+    { id:'void', name:'Void Walker', desc:'Dark matter suit + distortion aura + phase effect', cost:5000,
+      colors:{ body:0x220044, emissive:0x110022, helmet:0x000000, goggle:0xaa00ff },
+      trail:{ r:0.5, g:0.0, b:1.0 }, extras:['aura','phase'] },
+    { id:'inferno', name:'Inferno', desc:'Molten suit + ember trail + heat shimmer', cost:8000,
+      colors:{ body:0xff2200, emissive:0x881100, helmet:0x440000, goggle:0xffaa00 },
+      trail:{ r:1.0, g:0.3, b:0.0 }, extras:['embers','shimmer'] },
+    { id:'spectre', name:'Spectre', desc:'Semi-transparent ghost suit + phantom trail', cost:12000,
+      colors:{ body:0x556688, emissive:0x334455, helmet:0x334455, goggle:0xaaddff },
+      trail:{ r:0.6, g:0.8, b:1.0 }, extras:['ghost','transparent'] },
+    { id:'glitch', name:'Glitch', desc:'Corrupted data suit + pixel scatter + RGB split', cost:20000,
+      colors:{ body:0x00ffff, emissive:0x003333, helmet:0xff0066, goggle:0x00ff00 },
+      trail:{ r:0.0, g:1.0, b:1.0 }, extras:['glitch','rgbsplit'] },
   ],
   upgrades: [
-    { id:'hitbox1', name:'Slim Fit I', desc:'5% smaller hitbox', cost:200, max:1, effect:'hitbox', val:0.05 },
-    { id:'hitbox2', name:'Slim Fit II', desc:'10% smaller hitbox', cost:500, max:1, requires:'hitbox1', effect:'hitbox', val:0.10 },
-    { id:'accel1', name:'Quick Reflexes I', desc:'+15% move speed', cost:150, max:1, effect:'accel', val:0.15 },
-    { id:'accel2', name:'Quick Reflexes II', desc:'+30% move speed', cost:400, max:1, requires:'accel1', effect:'accel', val:0.30 },
-    { id:'coinmult', name:'Coin Magnet', desc:'Earn 50% more coins', cost:350, max:1, effect:'coinmult', val:1.5 },
-    { id:'ringboost', name:'Ring Master', desc:'Rings slow you 25 MPH', cost:500, max:1, effect:'ringboost', val:25 },
+    // Hitbox
+    { id:'hitbox1', name:'Slim Fit I', desc:'5% smaller hitbox', cost:500, max:1, effect:'hitbox', val:0.05 },
+    { id:'hitbox2', name:'Slim Fit II', desc:'10% smaller hitbox', cost:1500, max:1, requires:'hitbox1', effect:'hitbox', val:0.10 },
+    { id:'hitbox3', name:'Slim Fit III', desc:'18% smaller hitbox', cost:5000, max:1, requires:'hitbox2', effect:'hitbox', val:0.18 },
+    // Move speed
+    { id:'accel1', name:'Quick Reflexes I', desc:'+15% move speed', cost:400, max:1, effect:'accel', val:0.15 },
+    { id:'accel2', name:'Quick Reflexes II', desc:'+30% move speed', cost:1200, max:1, requires:'accel1', effect:'accel', val:0.30 },
+    { id:'accel3', name:'Quick Reflexes III', desc:'+50% move speed', cost:4000, max:1, requires:'accel2', effect:'accel', val:0.50 },
+    // Coins
+    { id:'coinmult1', name:'Coin Magnet I', desc:'50% more coins', cost:800, max:1, effect:'coinmult', val:1.5 },
+    { id:'coinmult2', name:'Coin Magnet II', desc:'2x coins', cost:3000, max:1, requires:'coinmult1', effect:'coinmult', val:2.0 },
+    { id:'coinmult3', name:'Coin Magnet III', desc:'3x coins', cost:10000, max:1, requires:'coinmult2', effect:'coinmult', val:3.0 },
+    // Ring
+    { id:'ringboost1', name:'Ring Master I', desc:'Rings slow you 25 MPH', cost:1000, max:1, effect:'ringboost', val:25 },
+    { id:'ringboost2', name:'Ring Master II', desc:'Rings slow you 40 MPH', cost:4000, max:1, requires:'ringboost1', effect:'ringboost', val:40 },
+    // Terminal velocity
+    { id:'termvel1', name:'Drag Chute I', desc:'Terminal velocity -5 MPH', cost:600, max:1, effect:'termvel', val:5 },
+    { id:'termvel2', name:'Drag Chute II', desc:'Terminal velocity -10 MPH', cost:2000, max:1, requires:'termvel1', effect:'termvel', val:10 },
+    // Invuln on start
+    { id:'grace1', name:'Safety Buffer I', desc:'+1s starting invuln', cost:300, max:1, effect:'grace', val:60 },
+    { id:'grace2', name:'Safety Buffer II', desc:'+2s starting invuln', cost:1000, max:1, requires:'grace1', effect:'grace', val:120 },
+    // Near miss bonus
+    { id:'nearmiss1', name:'Daredevil I', desc:'Near misses give +2 coins', cost:700, max:1, effect:'nearmiss_coin', val:2 },
+    { id:'nearmiss2', name:'Daredevil II', desc:'Near misses give +5 coins', cost:2500, max:1, requires:'nearmiss1', effect:'nearmiss_coin', val:5 },
+    // Combo multiplier
+    { id:'combo1', name:'Flow State I', desc:'Combos earn bonus coins', cost:1500, max:1, effect:'combo_coin', val:1 },
+    { id:'combo2', name:'Flow State II', desc:'Combos earn 2x bonus coins', cost:5000, max:1, requires:'combo1', effect:'combo_coin', val:2 },
+    // Ring size
+    { id:'ringsize', name:'Wide Rings', desc:'Ring holes 20% larger', cost:2000, max:1, effect:'ringsize', val:0.2 },
+    // Wager bonus
+    { id:'wagerboost', name:'High Roller', desc:'Wagers pay 3x instead of 2x', cost:8000, max:1, effect:'wagerboost', val:3 },
   ],
   bonuses: [
-    { id:'shield', name:'Shield', desc:'Survive one hit this run', cost:100, effect:'shield' },
-    { id:'headstart', name:'Head Start', desc:'Start at 5000 FT instead', cost:75, effect:'headstart' },
+    { id:'shield', name:'Shield', desc:'Survive one hit this run', cost:250, effect:'shield' },
+    { id:'headstart', name:'Head Start', desc:'Start at 5000 FT instead', cost:200, effect:'headstart' },
+    { id:'slowstart', name:'Slow Start', desc:'Begin at half speed for 5s', cost:300, effect:'slowstart' },
   ]
 };
+
+// Speed cap after ring pass — lerps back to normal over time
+let ringSpeedCap = Infinity;
+let ringCapDecay = 0; // frames until cap fully releases
 
 function getUpgradeVal(effect, fallback) {
   for (const u of SHOP_ITEMS.upgrades) {
@@ -581,13 +629,136 @@ function getUpgradeVal(effect, fallback) {
   return fallback;
 }
 
+let currentSkinExtras = [];
+let skinAuraLight = null;
+let skinWings = [];
+
 function applySkin(skinId) {
   const skin = SHOP_ITEMS.skins.find(s => s.id === skinId);
   if (!skin) return;
+
+  // Base colors
   bodyMat.color.setHex(skin.colors.body);
   bodyMat.emissive.setHex(skin.colors.emissive);
   helmetMat.color.setHex(skin.colors.helmet);
   gogMat.color.setHex(skin.colors.goggle);
+
+  // Trail color
+  if (skin.trail) {
+    trailMat.fragmentShader = `
+      varying float vAlpha;
+      void main(){
+        float d = length(gl_PointCoord - vec2(0.5));
+        if(d > 0.5) discard;
+        gl_FragColor = vec4(${skin.trail.r.toFixed(2)}, ${skin.trail.g.toFixed(2)}, ${skin.trail.b.toFixed(2)}, vAlpha * (1.0 - d*2.0));
+      }
+    `;
+    trailMat.needsUpdate = true;
+  }
+
+  // Clean up old extras
+  if (skinAuraLight) { playerModel.remove(skinAuraLight); skinAuraLight = null; }
+  skinWings.forEach(w => playerModel.remove(w));
+  skinWings = [];
+  bodyMat.transparent = false; bodyMat.opacity = 1;
+  bodyMat.wireframe = false;
+  bodyMat.shininess = 40;
+  headMat.transparent = false; headMat.opacity = 1;
+
+  currentSkinExtras = skin.extras || [];
+
+  // Apply visual extras
+  for (const fx of currentSkinExtras) {
+    if (fx === 'frost') {
+      bodyMat.shininess = 120; // shiny ice look
+    }
+    if (fx === 'wireframe') {
+      // Add wireframe overlay effect
+      bodyMat.wireframe = false; // body stays solid but with high shininess
+      bodyMat.shininess = 200;
+    }
+    if (fx === 'glow') {
+      // Point light on player
+      skinAuraLight = new THREE.PointLight(skin.colors.body, 0.6, 12);
+      skinAuraLight.position.set(0, 0, 0);
+      playerModel.add(skinAuraLight);
+    }
+    if (fx === 'wings') {
+      // Small wing fins on back
+      const wingMat = new THREE.MeshPhongMaterial({ color:skin.colors.body, emissive:skin.colors.emissive, side:THREE.DoubleSide, transparent:true, opacity:0.7 });
+      for (let side = -1; side <= 1; side += 2) {
+        const wGeo = new THREE.PlaneGeometry(1.8, 0.6);
+        const wing = new THREE.Mesh(wGeo, wingMat);
+        wing.position.set(side * 1.2, -0.2, -0.3);
+        wing.rotation.z = side * 0.4;
+        wing.rotation.y = side * 0.3;
+        playerModel.add(wing);
+        skinWings.push(wing);
+      }
+    }
+    if (fx === 'sparkle') {
+      bodyMat.shininess = 180;
+    }
+    if (fx === 'aura') {
+      skinAuraLight = new THREE.PointLight(0x8800ff, 0.8, 15);
+      skinAuraLight.position.set(0, 0, 0);
+      playerModel.add(skinAuraLight);
+    }
+    if (fx === 'transparent' || fx === 'ghost') {
+      bodyMat.transparent = true;
+      bodyMat.opacity = 0.45;
+      headMat.transparent = true;
+      headMat.opacity = 0.5;
+    }
+    if (fx === 'shimmer') {
+      bodyMat.shininess = 150;
+    }
+    if (fx === 'embers') {
+      skinAuraLight = new THREE.PointLight(0xff4400, 0.7, 10);
+      skinAuraLight.position.set(0, 0, 0);
+      playerModel.add(skinAuraLight);
+    }
+    if (fx === 'glitch') {
+      bodyMat.shininess = 250;
+    }
+    if (fx === 'rgbsplit') {
+      skinAuraLight = new THREE.PointLight(0x00ffff, 0.5, 8);
+      skinAuraLight.position.set(0, 0, 0);
+      playerModel.add(skinAuraLight);
+    }
+  }
+}
+
+// Per-frame skin FX updates (called in game loop)
+function updateSkinFX(time, dt) {
+  if (!currentSkinExtras.length) return;
+
+  // Wing flutter
+  skinWings.forEach((w, i) => {
+    const side = i === 0 ? -1 : 1;
+    w.rotation.z = side * (0.4 + Math.sin(time * 0.005 + i) * 0.15);
+  });
+
+  // Aura pulse
+  if (skinAuraLight) {
+    skinAuraLight.intensity = skinAuraLight.intensity * 0.95 + (0.5 + Math.sin(time * 0.003) * 0.3) * 0.05;
+  }
+
+  // Ghost flicker
+  if (currentSkinExtras.includes('ghost')) {
+    bodyMat.opacity = 0.35 + Math.sin(time * 0.004) * 0.12;
+  }
+
+  // Glitch jitter — randomly offset model briefly
+  if (currentSkinExtras.includes('glitch')) {
+    if (Math.random() < 0.03) {
+      playerModel.position.x = (Math.random() - 0.5) * 0.3;
+      playerModel.position.z = (Math.random() - 0.5) * 0.3;
+    } else {
+      playerModel.position.x *= 0.8;
+      playerModel.position.z *= 0.8;
+    }
+  }
 }
 
 // ---- Render Shop ----
@@ -1009,7 +1180,8 @@ function spawnObstacleRow(worldY) {
       break;
     }
     case 'ring': {
-      const innerR = Math.max(5, 10 - progress * 4);
+      const ringSizeBonus = getUpgradeVal('ringsize', 0);
+      const innerR = Math.max(5, 10 - progress * 4) * (1 + ringSizeBonus);
       const outerR = innerR + 2;
       // Rings are OPTIONAL — green/teal to signal "bonus" not "death"
       const ringObsMat = new THREE.MeshPhongMaterial({ color:0x00ff88, emissive:0x003322, shininess:80, transparent:true, opacity:0.85 });
@@ -1499,7 +1671,8 @@ let zoneBannerTimer = 0;
 function updateHUD() {
   hAlt.textContent = Math.floor(altitude).toLocaleString();
   const mph = Math.floor(speed * 30);
-  const atTerminal = mph >= TERMINAL_VEL - 1;
+  const effectiveTermVel = TERMINAL_VEL - getUpgradeVal('termvel', 0);
+  const atTerminal = mph >= effectiveTermVel - 1;
   hSpd.innerHTML = mph + ' <small>MPH</small>' + (atTerminal ? ' <small style="color:#ff4444;opacity:0.7">MAX</small>' : '');
   const zc = zoneColors(altitude);
   hZone.textContent = zc.name;
@@ -1641,6 +1814,9 @@ function checkCollision() {
             // Speed brake reward!
             const ringSlowMph = getUpgradeVal('ringboost', 15);
             speed = Math.max(0.3, speed - ringSlowMph / 30);
+            // Set a speed cap that decays — this prevents instant re-acceleration
+            ringSpeedCap = speed;
+            ringCapDecay = 180; // ~3 seconds to fully release cap
             ringsHit++;
             showSpeedBrake();
           }
@@ -1701,6 +1877,8 @@ function checkNearMiss() {
     if (dist < 3.5 && dist > PLAYER_HITBOX) {
       obs._nearMissed = true;
       nearMisses++;
+      const nmCoins = getUpgradeVal('nearmiss_coin', 0);
+      if (nmCoins > 0) { runCoins += nmCoins; }
       showNearMiss();
     }
   }
@@ -1721,14 +1899,18 @@ function startGame() {
   nextObsY = -80;
   lastZoneName = '';
   shakeAmt = 0;
-  invulnFrames = 90;
+  invulnFrames = 90 + getUpgradeVal('grace', 0);
 
-  // Coin system reset
+  // Reset ring speed cap
+  ringSpeedCap = Infinity;
+  ringCapDecay = 0;
   runCoins = 0;
   lastCoinAlt = altitude;
 
   // Apply skin
   applySkin(saveData.equipped || 'default');
+  playerModel.position.set(0, 0, 0);
+  playerModel.rotation.set(Math.PI, 0, 0); // preserve the face-down flip
 
   clearObstacles();
   playerGroup.position.set(0, 0, 0);
@@ -1772,9 +1954,10 @@ function showWin() {
   totalCoins += runCoins;
   let wagerResult = '';
   if (currentWager > 0) {
-    const winnings = currentWager * 2;
+    const wagerMult = getUpgradeVal('wagerboost', 2);
+    const winnings = currentWager * wagerMult;
     totalCoins += winnings;
-    wagerResult = `WAGER WON: +${winnings.toLocaleString()}`;
+    wagerResult = `WAGER WON: +${winnings.toLocaleString()} (${wagerMult}x)`;
   }
   currentWager = 0;
   activeBonus = { shield:false, magnet:false, headstart:false };
@@ -1881,13 +2064,29 @@ function loop(time) {
 
     // Speed ramp — slow ease-in, gradual build, punchy final 20%
     const progress = 1 - altitude / START_ALT;
-    // Quadratic ease: crawls at start, builds momentum mid-game, kicks hard last 20%
     const eased = progress < 0.8
-      ? progress * progress * 1.5   // gentle quadratic 0→0.96
-      : 0.96 + (progress - 0.8) * 4.0; // sharp final ramp 0.96→1.76
-    const targetSpeed = 0.6 + eased * 2.8;
+      ? progress * progress * 1.5
+      : 0.96 + (progress - 0.8) * 4.0;
+    let targetSpeed = 0.6 + eased * 2.8;
+
+    // Slow start bonus
+    if (activeBonus.slowstart && gameTime < 300) {
+      targetSpeed *= 0.5;
+    } else if (activeBonus.slowstart && gameTime >= 300) {
+      activeBonus.slowstart = false;
+    }
+
+    // Ring speed cap — gradually releases
+    if (ringCapDecay > 0) {
+      ringCapDecay -= dt;
+      const capLerp = Math.max(0, ringCapDecay / 180);
+      const effectiveCap = ringSpeedCap + (TERMINAL_SPD - ringSpeedCap) * (1 - capLerp);
+      targetSpeed = Math.min(targetSpeed, effectiveCap);
+    }
+
     speed += (targetSpeed - speed) * 0.006 * dt;
-    speed = Math.min(speed, TERMINAL_SPD); // terminal velocity cap
+    const termVelReduction = getUpgradeVal('termvel', 0);
+    speed = Math.min(speed, (TERMINAL_VEL - termVelReduction) / 30);
     maxSpd = Math.max(maxSpd, speed);
 
     // Altitude
@@ -1895,6 +2094,9 @@ function loop(time) {
 
     // Earn coins
     tickCoins();
+
+    // Skin visual FX
+    updateSkinFX(time, dt);
 
     // Check deploy
     if (altitude <= DEPLOY_ALT) {
@@ -1992,7 +2194,11 @@ function loop(time) {
         combo++;
         comboTime = 90;
         maxCombo = Math.max(maxCombo, combo);
-        if (combo >= 3) showCombo(combo);
+        if (combo >= 3) {
+          showCombo(combo);
+          const comboCoins = getUpgradeVal('combo_coin', 0);
+          if (comboCoins > 0) { runCoins += combo * comboCoins; }
+        }
       }
     });
 
