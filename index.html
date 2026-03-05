@@ -909,7 +909,7 @@ loadSave();
 
 // ---- Three.js Setup ----
 const scene    = new THREE.Scene();
-const camera   = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.5, 800);
+const camera   = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.5, 8000);
 const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
@@ -923,16 +923,20 @@ window.addEventListener('resize', () => {
 });
 
 // ---- Fog & Lighting ----
-scene.fog = new THREE.FogExp2(0x0a0a1a, 0.004);
+scene.fog = new THREE.FogExp2(0x080820, 0.0018);
 
-const ambLight = new THREE.AmbientLight(0x334466, 0.6);
+const ambLight = new THREE.AmbientLight(0x445588, 0.7);
 scene.add(ambLight);
-const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+const dirLight = new THREE.DirectionalLight(0xffeedd, 0.8);
 dirLight.position.set(20, 50, 10);
 scene.add(dirLight);
-const rimLight = new THREE.DirectionalLight(0x4488ff, 0.3);
+const rimLight = new THREE.DirectionalLight(0x4499ff, 0.5);
 rimLight.position.set(-15, -30, -10);
 scene.add(rimLight);
+// Uplight for dramatic under-glow
+const upLight = new THREE.DirectionalLight(0xff6644, 0.2);
+upLight.position.set(0, -40, 0);
+scene.add(upLight);
 
 // ---- Player ----
 const playerGroup = new THREE.Group();
@@ -1074,12 +1078,12 @@ function getObsMat(color, emissive) {
 }
 
 function zoneColors(alt) {
-  if (alt > 6000) return { obs:0x4466ff, em:0x111133, fog:0x0a0a2a, name:'STRATOSPHERE' };
-  if (alt > 4500) return { obs:0x44aaff, em:0x112233, fog:0x0a1a3a, name:'HIGH ALTITUDE' };
-  if (alt > 3000) return { obs:0x66ccee, em:0x112828, fog:0x1a3050, name:'CLOUD LAYER' };
-  if (alt > 1500) return { obs:0xffaa44, em:0x332200, fog:0x2a3a30, name:'TURBULENCE' };
-  if (alt > 750)  return { obs:0xff6644, em:0x331100, fog:0x3a4a30, name:'LOW ALTITUDE' };
-  return              { obs:0xff3333, em:0x330000, fog:0x4a2a20, name:'DANGER ZONE' };
+  if (alt > 6000) return { obs:0x5588ff, em:0x1a1a55, fog:0x080822, name:'STRATOSPHERE' };
+  if (alt > 4500) return { obs:0x33ccff, em:0x113355, fog:0x081833, name:'HIGH ALTITUDE' };
+  if (alt > 3000) return { obs:0x44eeff, em:0x114444, fog:0x102840, name:'CLOUD LAYER' };
+  if (alt > 1500) return { obs:0xffbb22, em:0x553300, fog:0x1a2818, name:'TURBULENCE' };
+  if (alt > 750)  return { obs:0xff5522, em:0x551100, fog:0x2a1a10, name:'LOW ALTITUDE' };
+  return              { obs:0xff2222, em:0x550000, fog:0x3a1010, name:'DANGER ZONE' };
 }
 
 // ---- Obstacle Generation ----
@@ -1360,44 +1364,392 @@ function addGlowEdge(parent, w, h, d, mat) {
 // ---- Clouds (3D planes scattered vertically) ----
 const cloudGroup = new THREE.Group();
 scene.add(cloudGroup);
-const cloudMat = new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.06, side:THREE.DoubleSide, depthWrite:false });
 
+// Volumetric cloud puffs — clusters of 3-5 spheres
 function spawnCloud(yPos) {
-  const geo = new THREE.PlaneGeometry(15+Math.random()*30, 5+Math.random()*10);
-  const m = new THREE.Mesh(geo, cloudMat.clone());
-  m.material.opacity = 0.02 + Math.random()*0.06;
-  // Constrain within cylinder
-  const cR = Math.random() * CORRIDOR_R * 0.8;
+  const cluster = new THREE.Group();
+  const puffs = 3 + Math.floor(Math.random() * 3); // 3-5 spheres
+  const baseR = 4 + Math.random() * 8;
+  const cR = Math.random() * CORRIDOR_R * 0.75;
   const cA = Math.random() * Math.PI * 2;
-  m.position.set(Math.cos(cA)*cR, yPos, Math.sin(cA)*cR);
-  m.rotation.x = -Math.PI/2 + (Math.random()-0.5)*0.3;
-  m.rotation.z = Math.random()*Math.PI;
-  cloudGroup.add(m);
-  return m;
+  cluster.position.set(Math.cos(cA)*cR, yPos, Math.sin(cA)*cR);
+
+  for (let i = 0; i < puffs; i++) {
+    const r = baseR * (0.5 + Math.random() * 0.5);
+    const geo = new THREE.SphereGeometry(r, 8, 6);
+    const mat = new THREE.MeshPhongMaterial({
+      color: 0xddeeff,
+      emissive: 0x334466,
+      transparent: true,
+      opacity: 0.04 + Math.random() * 0.04,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+    const puff = new THREE.Mesh(geo, mat);
+    puff.position.set(
+      (Math.random()-0.5) * baseR * 1.5,
+      (Math.random()-0.5) * baseR * 0.25,
+      (Math.random()-0.5) * baseR * 1.5
+    );
+    puff.scale.y = 0.35 + Math.random() * 0.2; // flatten
+    cluster.add(puff);
+  }
+
+  cloudGroup.add(cluster);
+  return cluster;
 }
 
 let cloudMeshes = [];
 function initClouds() {
-  cloudMeshes.forEach(c => { cloudGroup.remove(c); c.geometry.dispose(); });
+  cloudMeshes.forEach(c => {
+    c.children.forEach(ch => { if(ch.geometry) ch.geometry.dispose(); if(ch.material) ch.material.dispose(); });
+    cloudGroup.remove(c);
+  });
   cloudMeshes = [];
-  for (let i = 0; i < 40; i++) {
-    cloudMeshes.push(spawnCloud(-i * 25 - Math.random()*25));
+  for (let i = 0; i < 35; i++) {
+    cloudMeshes.push(spawnCloud(-i * 30 - Math.random()*30));
   }
 }
 
-// ---- Stars (high altitude) ----
+// ---- Stars (1500, varied sizes) ----
 const starGeo = new THREE.BufferGeometry();
-const starCount = 500;
+const starCount = 1500;
 const starPos = new Float32Array(starCount * 3);
+const starSizes = new Float32Array(starCount);
 for (let i = 0; i < starCount; i++) {
-  starPos[i*3]   = (Math.random()-0.5)*300;
-  starPos[i*3+1] = (Math.random()-0.5)*300;
-  starPos[i*3+2] = (Math.random()-0.5)*300;
+  starPos[i*3]   = (Math.random()-0.5)*400;
+  starPos[i*3+1] = (Math.random()-0.5)*400;
+  starPos[i*3+2] = (Math.random()-0.5)*400;
+  starSizes[i] = 0.2 + Math.random() * 1.2;
 }
 starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-const starMat = new THREE.PointsMaterial({ color:0xffffff, size:0.5, transparent:true, opacity:0.6, depthWrite:false });
+starGeo.setAttribute('size', new THREE.BufferAttribute(starSizes, 1));
+const starMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false,
+  uniforms: { uOpacity: { value: 0.6 }, uTime: { value: 0 } },
+  vertexShader: `
+    attribute float size;
+    varying float vSize;
+    void main(){
+      vSize = size;
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      gl_PointSize = size * (250.0 / -mv.z);
+      gl_Position = projectionMatrix * mv;
+    }
+  `,
+  fragmentShader: `
+    uniform float uOpacity;
+    uniform float uTime;
+    varying float vSize;
+    void main(){
+      float d = length(gl_PointCoord - vec2(0.5));
+      if(d > 0.5) discard;
+      float twinkle = 0.6 + 0.4 * sin(uTime * 2.0 + vSize * 20.0);
+      float glow = 1.0 - d * 2.0;
+      gl_FragColor = vec4(1.0, 0.97, 0.9, uOpacity * glow * twinkle * (0.3 + vSize * 0.5));
+    }
+  `
+});
 const starField = new THREE.Points(starGeo, starMat);
 scene.add(starField);
+
+// ═══════════════════════════════════════════
+// SHOOTING STARS — SO MANY SHOOTING STARS
+// ═══════════════════════════════════════════
+const SHOOT_MAX = 60;
+const shootStars = [];
+const shootGroup = new THREE.Group();
+scene.add(shootGroup);
+
+function spawnShootingStar() {
+  if (shootStars.length >= SHOOT_MAX) return;
+  // Random position in a big sphere around the player
+  const angle = Math.random() * Math.PI * 2;
+  const elev = (Math.random() - 0.3) * Math.PI;
+  const dist = 60 + Math.random() * 200;
+  const x = Math.cos(angle) * Math.cos(elev) * dist;
+  const y = Math.sin(elev) * dist + 30;
+  const z = Math.sin(angle) * Math.cos(elev) * dist;
+
+  // Direction — mostly downward with some spread
+  const dx = (Math.random()-0.5) * 2;
+  const dy = -(1.5 + Math.random() * 3);
+  const dz = (Math.random()-0.5) * 2;
+  const spd = 2 + Math.random() * 5;
+
+  // Brightness and size
+  const brightness = 0.4 + Math.random() * 0.6;
+  const tailLen = 3 + Math.random() * 8;
+
+  // Create line geometry for the streak
+  const pts = [];
+  for (let t = 0; t < 6; t++) {
+    pts.push(new THREE.Vector3(
+      x - dx * spd * t * 0.3,
+      y - dy * spd * t * 0.3,
+      z - dz * spd * t * 0.3
+    ));
+  }
+  const lineGeo = new THREE.BufferGeometry().setFromPoints(pts);
+  // Color: white core with blue/yellow tint
+  const hue = Math.random();
+  const col = hue < 0.5
+    ? new THREE.Color(0.9, 0.95, 1.0)  // blue-white
+    : hue < 0.8
+    ? new THREE.Color(1.0, 0.95, 0.8)  // warm white
+    : new THREE.Color(0.8, 0.9, 1.0);  // cool white
+
+  const lineMat = new THREE.LineBasicMaterial({
+    color: col,
+    transparent: true,
+    opacity: brightness,
+    depthWrite: false,
+    linewidth: 1
+  });
+  const line = new THREE.Line(lineGeo, lineMat);
+  shootGroup.add(line);
+
+  // Bright head point
+  const headGeo = new THREE.BufferGeometry();
+  headGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([x, y, z]), 3));
+  const headMat = new THREE.PointsMaterial({
+    color: 0xffffff,
+    size: 0.8 + Math.random() * 1.2,
+    transparent: true,
+    opacity: brightness,
+    depthWrite: false
+  });
+  const head = new THREE.Points(headGeo, headMat);
+  shootGroup.add(head);
+
+  shootStars.push({
+    line, head, lineMat, headMat,
+    x, y, z, dx: dx*spd, dy: dy*spd, dz: dz*spd,
+    life: 60 + Math.random() * 120,
+    maxLife: 60 + Math.random() * 120,
+    tailLen,
+    brightness
+  });
+}
+
+function updateShootingStars(dt) {
+  // Spawn rate depends on altitude — tons at high alt, some at low
+  const altFactor = Math.max(0.1, altitude / START_ALT);
+  const spawnRate = 0.15 + altFactor * 0.4; // spawns per frame
+  if (Math.random() < spawnRate * dt) spawnShootingStar();
+  if (Math.random() < spawnRate * 0.5 * dt) spawnShootingStar(); // bonus spawn
+  if (altitude > 5000 && Math.random() < 0.3 * dt) spawnShootingStar(); // extra at high alt
+
+  for (let i = shootStars.length - 1; i >= 0; i--) {
+    const s = shootStars[i];
+    s.life -= dt;
+    s.x += s.dx * dt;
+    s.y += s.dy * dt;
+    s.z += s.dz * dt;
+
+    // Update head position
+    const headPos = s.head.geometry.attributes.position;
+    headPos.array[0] = s.x;
+    headPos.array[1] = s.y;
+    headPos.array[2] = s.z;
+    headPos.needsUpdate = true;
+
+    // Update trail
+    const linePos = s.line.geometry.attributes.position;
+    for (let t = 0; t < 6; t++) {
+      linePos.array[t*3]   = s.x - s.dx * t * 0.3;
+      linePos.array[t*3+1] = s.y - s.dy * t * 0.3;
+      linePos.array[t*3+2] = s.z - s.dz * t * 0.3;
+    }
+    linePos.needsUpdate = true;
+
+    // Fade based on life
+    const fade = Math.min(1, s.life / 30) * s.brightness;
+    s.lineMat.opacity = fade * 0.7;
+    s.headMat.opacity = fade;
+
+    if (s.life <= 0) {
+      shootGroup.remove(s.line);
+      shootGroup.remove(s.head);
+      s.line.geometry.dispose(); s.lineMat.dispose();
+      s.head.geometry.dispose(); s.headMat.dispose();
+      shootStars.splice(i, 1);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════
+// AMBIENT MOTES — tiny floating particles
+// ═══════════════════════════════════════════
+const MOTE_COUNT = 200;
+const moteGeo = new THREE.BufferGeometry();
+const motePositions = new Float32Array(MOTE_COUNT * 3);
+const moteSizes = new Float32Array(MOTE_COUNT);
+for (let i = 0; i < MOTE_COUNT; i++) {
+  const mA = Math.random() * Math.PI * 2;
+  const mR = Math.random() * CORRIDOR_R;
+  motePositions[i*3]   = Math.cos(mA) * mR;
+  motePositions[i*3+1] = (Math.random()-0.5) * 100;
+  motePositions[i*3+2] = Math.sin(mA) * mR;
+  moteSizes[i] = 0.3 + Math.random() * 0.8;
+}
+moteGeo.setAttribute('position', new THREE.BufferAttribute(motePositions, 3));
+moteGeo.setAttribute('size', new THREE.BufferAttribute(moteSizes, 1));
+const moteMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false,
+  uniforms: { uTime: { value: 0 }, uOpacity: { value: 0.3 } },
+  vertexShader: `
+    attribute float size;
+    uniform float uTime;
+    varying float vAlpha;
+    void main(){
+      vAlpha = 0.3 + 0.3 * sin(uTime * 1.5 + position.x * 0.5 + position.z * 0.3);
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      gl_PointSize = size * (150.0 / -mv.z);
+      gl_Position = projectionMatrix * mv;
+    }
+  `,
+  fragmentShader: `
+    uniform float uOpacity;
+    varying float vAlpha;
+    void main(){
+      float d = length(gl_PointCoord - vec2(0.5));
+      if(d > 0.5) discard;
+      float glow = 1.0 - d * 2.0;
+      gl_FragColor = vec4(0.6, 0.8, 1.0, uOpacity * vAlpha * glow);
+    }
+  `
+});
+const moteField = new THREE.Points(moteGeo, moteMat);
+scene.add(moteField);
+
+function updateMotes(dt, fallStep) {
+  moteMat.uniforms.uTime.value += dt * 0.016;
+  // Motes drift upward relative to player (world moves up)
+  for (let i = 0; i < MOTE_COUNT; i++) {
+    motePositions[i*3+1] += fallStep * 0.5 + Math.sin(moteMat.uniforms.uTime.value + i) * 0.01;
+    if (motePositions[i*3+1] > 60) {
+      motePositions[i*3+1] = -60;
+      const mA = Math.random() * Math.PI * 2;
+      const mR = Math.random() * CORRIDOR_R;
+      motePositions[i*3] = Math.cos(mA) * mR;
+      motePositions[i*3+2] = Math.sin(mA) * mR;
+    }
+  }
+  moteGeo.attributes.position.needsUpdate = true;
+}
+
+// ═══════════════════════════════════════════
+// GROUND PLANE — visible the whole time far below
+// ═══════════════════════════════════════════
+const ALT_TO_WORLD = 1.125; // altitude-feet per world-unit (from speed*1.8/speed*1.6)
+const GROUND_INITIAL_Y = -(START_ALT / ALT_TO_WORLD); // ~-6667
+
+const groundGroup = new THREE.Group();
+groundGroup.position.y = GROUND_INITIAL_Y;
+scene.add(groundGroup);
+
+// Main ground disc
+const groundGeo = new THREE.CircleGeometry(300, 48);
+const groundMat = new THREE.MeshPhongMaterial({
+  color: 0x2a5520,
+  emissive: 0x0a1a08,
+  shininess: 10,
+  side: THREE.DoubleSide
+});
+const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+groundMesh.rotation.x = -Math.PI / 2;
+groundGroup.add(groundMesh);
+
+// Darker outer ring
+const outerGeo = new THREE.RingGeometry(280, 500, 48);
+const outerMat = new THREE.MeshPhongMaterial({
+  color: 0x1a3a14,
+  emissive: 0x050a04,
+  side: THREE.DoubleSide,
+  transparent: true,
+  opacity: 0.8
+});
+const outerMesh = new THREE.Mesh(outerGeo, outerMat);
+outerMesh.rotation.x = -Math.PI / 2;
+groundGroup.add(outerMesh);
+
+// Landing zone target
+const lzGeo = new THREE.RingGeometry(3, 4, 32);
+const lzMat = new THREE.MeshBasicMaterial({ color:0xffffff, side:THREE.DoubleSide, transparent:true, opacity:0.3 });
+const lzMesh = new THREE.Mesh(lzGeo, lzMat);
+lzMesh.rotation.x = -Math.PI / 2;
+lzMesh.position.y = 0.1;
+groundGroup.add(lzMesh);
+
+// Inner circle
+const lzInner = new THREE.Mesh(
+  new THREE.RingGeometry(1, 1.5, 32),
+  new THREE.MeshBasicMaterial({ color:0xff6644, side:THREE.DoubleSide, transparent:true, opacity:0.3 })
+);
+lzInner.rotation.x = -Math.PI / 2;
+lzInner.position.y = 0.1;
+groundGroup.add(lzInner);
+
+// Cross on landing zone
+for (let a = 0; a < 2; a++) {
+  const crossGeo = new THREE.PlaneGeometry(6, 0.3);
+  const crossMat = new THREE.MeshBasicMaterial({ color:0xffffff, side:THREE.DoubleSide, transparent:true, opacity:0.2 });
+  const crossMesh = new THREE.Mesh(crossGeo, crossMat);
+  crossMesh.rotation.x = -Math.PI / 2;
+  crossMesh.rotation.z = a * Math.PI / 2;
+  crossMesh.position.y = 0.1;
+  groundGroup.add(crossMesh);
+}
+
+// Some terrain variation — small random bumps/patches
+for (let i = 0; i < 25; i++) {
+  const patchR = 8 + Math.random() * 20;
+  const patchGeo = new THREE.CircleGeometry(patchR, 8);
+  const shade = 0.7 + Math.random() * 0.3;
+  const patchMat = new THREE.MeshPhongMaterial({
+    color: new THREE.Color(0.16 * shade, 0.33 * shade, 0.12 * shade),
+    emissive: new THREE.Color(0.03, 0.06, 0.02),
+    side: THREE.DoubleSide
+  });
+  const patch = new THREE.Mesh(patchGeo, patchMat);
+  patch.rotation.x = -Math.PI / 2;
+  const pA = Math.random() * Math.PI * 2;
+  const pD = 10 + Math.random() * 250;
+  patch.position.set(Math.cos(pA)*pD, 0.05, Math.sin(pA)*pD);
+  groundGroup.add(patch);
+}
+
+// Trees (simple cones + cylinders scattered on ground)
+for (let i = 0; i < 40; i++) {
+  const treeGroup = new THREE.Group();
+  const tA = Math.random() * Math.PI * 2;
+  const tD = 25 + Math.random() * 250;
+  treeGroup.position.set(Math.cos(tA)*tD, 0, Math.sin(tA)*tD);
+
+  // Trunk
+  const trunkH = 2 + Math.random() * 3;
+  const trunkGeo = new THREE.CylinderGeometry(0.3, 0.4, trunkH, 5);
+  const trunkMat = new THREE.MeshPhongMaterial({ color:0x553311, emissive:0x110800 });
+  const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+  trunk.position.y = trunkH / 2;
+  treeGroup.add(trunk);
+
+  // Canopy
+  const canH = 3 + Math.random() * 4;
+  const canGeo = new THREE.ConeGeometry(1.5 + Math.random(), canH, 6);
+  const canMat = new THREE.MeshPhongMaterial({
+    color: new THREE.Color(0.1 + Math.random()*0.1, 0.35 + Math.random()*0.2, 0.08),
+    emissive: 0x051005
+  });
+  const canopy = new THREE.Mesh(canGeo, canMat);
+  canopy.position.y = trunkH + canH * 0.4;
+  treeGroup.add(canopy);
+
+  const sc = 0.6 + Math.random() * 0.8;
+  treeGroup.scale.set(sc, sc, sc);
+  groundGroup.add(treeGroup);
+}
 
 // ---- Explosion Particles ----
 const EXPL_COUNT = 200;
@@ -1923,6 +2275,7 @@ function startGame() {
   document.getElementById('chute-cinema').classList.remove('show');
 
   initClouds();
+  groundGroup.position.y = -(altitude / ALT_TO_WORLD);
 
   // Hide screens, show HUD
   document.getElementById('start-screen').classList.remove('show');
@@ -2051,9 +2404,13 @@ function loop(time) {
     camera.position.set(Math.sin(time*0.0003)*8, 15, Math.cos(time*0.0003)*8);
     camera.lookAt(0, -10, 0);
     starField.visible = true;
-    starField.rotation.y = time * 0.00005;
-    scene.fog.color.set(0x0a0a1a);
-    renderer.setClearColor(0x0a0a1a);
+    starMat.uniforms.uOpacity.value = 0.7;
+    starMat.uniforms.uTime.value = time * 0.001;
+    starField.rotation.y = time * 0.00004;
+    // Shooting stars on menu too
+    updateShootingStars(dt);
+    scene.fog.color.set(0x080820);
+    renderer.setClearColor(0x080820);
     renderer.render(scene, camera);
     return;
   }
@@ -2230,6 +2587,12 @@ function loop(time) {
       if (c.position.y > 80) c.position.y -= 1000;
     });
 
+    // Move ground
+    groundGroup.position.y += fallStep;
+
+    // Ambient motes
+    updateMotes(dt, fallStep);
+
     // Move cylinder with player
     corridorCylinder.position.y = playerGroup.position.y - cylHeight/2 + 50;
     corridorWire.position.y = playerGroup.position.y - cylHeight/2 + 50;
@@ -2284,6 +2647,7 @@ function loop(time) {
     // 3D scene still renders softly in background
     const fallStep = 0.2 * dt;
     cloudMeshes.forEach(c => { c.position.y += fallStep * 0.3; });
+    groundGroup.position.y += fallStep;
 
     if (chutePhase >= 5) {
       document.getElementById('chute-cinema').classList.remove('show');
@@ -2333,15 +2697,27 @@ function loop(time) {
   cylWireMat.opacity = 0.03 + Math.sin(time * 0.0015) * 0.01;
   ringMat.color.lerp(zoneCol, 0.02 * dt);
 
-  // Stars fade with altitude
-  starField.visible = altitude > 3000;
+  // Stars fade with altitude — twinkling shader
+  starField.visible = altitude > 2500;
   if (starField.visible) {
-    starMat.opacity = Math.min(0.6, (altitude - 3000) / 3000);
-    starField.rotation.y = time * 0.00003;
+    const starOp = Math.min(0.8, (altitude - 2500) / 3000);
+    starMat.uniforms.uOpacity.value = starOp;
+    starMat.uniforms.uTime.value = time * 0.001;
+    starField.rotation.y = time * 0.00002;
   }
+
+  // Shooting stars — always updating
+  updateShootingStars(dt);
+  shootGroup.position.y = playerGroup.position.y; // follow player vertically
+
+  // Ground — landing zone pulse, gets more visible as you descend
+  const altPct = altitude / START_ALT; // 1 = high, 0 = ground
+  lzMat.opacity = 0.15 + (1 - altPct) * 0.35 + Math.sin(time * 0.004) * 0.1;
+  lzInner.material.opacity = 0.15 + (1 - altPct) * 0.35 + Math.sin(time * 0.006) * 0.08;
 
   // Ambient light shifts
   ambLight.color.lerp(fogColor, 0.01 * dt);
+  upLight.intensity = 0.15 + Math.sin(time * 0.0005) * 0.05; // subtle pulse
 
   // Explosion
   updateExplosion(dt);
